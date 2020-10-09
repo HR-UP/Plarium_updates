@@ -1,0 +1,133 @@
+
+.g_cpanel{
+  //float: left;
+  position: relative;
+  display: none;
+  width: 100%;
+  //height: 5%;
+  //min-height: 50px;
+  height: 50px;
+  z-index: 1; // prevent g_content to go above the panel on horz scroll with extra-small screen width (<1024px)
+  background-color: #0374B0;
+  color: white;
+
+  .auth_box{
+    width: 100%;
+    //clear: both;
+    //position: relative;
+    box-sizing: border-box;
+    padding: 5px 10px;
+    text-align: left;
+    height: 50%;
+
+    .intro{
+      text-align: right;
+      float: right;
+      vertical-align: baseline;
+      line-height: 29px;
+      position: relative;
+
+      .tab{
+        border-right: 1px solid black;
+
+        &:last-child{
+          border-right: none;
+        }
+      }
+    }
+
+    .logo{
+      background: url("img/icon-114_white.png?`Math.random()`") no-repeat 50%;
+      background-size: contain;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      min-width: 50px;
+
+      &:hover{
+        cursor: pointer;
+      }
+
+
+
+      &[mode='default']:hover{
+          background-image: url("img/feedback_icon.png?`Math.random()`");
+      }
+
+      &[mode='feedback']{
+        width: 30px;
+        height: 30px;
+        left: -50px;
+        top: 5px;
+        display: inline-block;
+        vertical-align: top;
+        background-image: url("img/qst_icon.png?`Math.random()`");
+      }
+
+      &[mode='log_show']{
+        width: 30px;
+        height: 30px;
+        left: -85px;
+        top: 5px;
+        display: inline-block;
+        vertical-align: top;
+        background-image: url("img/alert-circle-outline.png?`Math.random()`");
+        filter: grayscale(100%) brightness(2);
+      }
+
+      &[mode='feedback']:hover{
+        background-image: url("img/headbar_tips_hover.png?`Math.random()`");
+      }
+
+    }
+
+    .autosave{
+      display: none;
+      position: absolute;
+      left: 100px;
+      top: 5px;
+      background: url("img/autosave.png?`Math.random()`") no-repeat 50%;
+      background-size: contain;
+      height: 80%;
+      opacity: 50%;
+      min-width: 50px;
+    }
+
+    .name{
+      font-family: 'museo_sans_cyrl500', sans-serif;
+      font-weight: bold;
+      color: #f3f3f3;
+      font-size: 24px;
+      display: block;
+      vertical-align: middle;
+      width: 60%;
+      margin: 0 auto;
+      text-align: center;
+      text-shadow: 0 4px 4px rgba(0, 0, 0, 0.25);
+      line-height: 40px;
+
+      &:hover{
+        cursor: pointer;
+      }
+    }
+
+    .tab{
+      display: inline-block;
+      vertical-align: baseline;
+      padding: 2px 10px 0 10px;
+      font-size: 18px;
+      line-height: 35px;
+      box-sizing: border-box;
+
+      &:hover{
+        cursor: pointer;
+        //color: #89A2BF;
+      }
+
+      &[tag=name]{
+        border-right: 2px solid black;
+      }
+    }
+  }
+}
+

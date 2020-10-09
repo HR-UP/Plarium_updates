@@ -1,11 +1,6 @@
 <?php
     include_once "Receiver.php";
-    //include_once "user.php";
-    //include_once "common.php";
-    //include_once "DBase.class.php";
     $cDB = new DBase;
-//<link rel="stylesheet/less" type="text/css" href="styles.less">
-//<script src="plugins/Less.js" type="text/javascript"></script>
 ?>
 
 <html>
