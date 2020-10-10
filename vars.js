@@ -53,7 +53,7 @@ $session.reset = function () {
         "Затрудняюсь ответить"];
 
     $new_qz.settings.intro_tx = {};
-    $new_qz.settings.intro_tx.self = "#TITLE#<br>"+
+    $new_qz.settings.intro_tx.env = "#TITLE#<br>"+
     "Привет!<br>"+
         "#TITLE#<br>"+
 
@@ -69,7 +69,9 @@ $session.reset = function () {
         "На заполнение анкеты у тебя уйдет не более $15–20 минут.$<br>"+
     "#TIME#<br>"+
         "Будем ждать твои ответы $до 30.09.2020 18:00$";
-    $new_qz.settings.intro_tx.env = $new_qz.settings.intro_tx.self;
+    $new_qz.settings.intro_tx.self = "Привет!<br><br>" +
+        "Это опрос, в котором ты должен оценить свое взаимодействие с коллегами.<br><br>" +
+        "Пожалуйста, отвечай честно. Так тебе будет проще понять, в чем твоя оценка собственных действий совпадает с оценкой коллег, а в чем — расходится с ней.";;
 
     $new_qz.settings.s_date_raw = "";
     $new_qz.settings.e_date_raw = "";
