@@ -518,11 +518,11 @@ function message_ex($action,$type,$about,$data,$tags){
 
             case "gang_change_pass":
                 $head = "Смена пароля для <b>"+ $data.name +"</b>";
-                $cont = "Введите новый пароля для данного аккаунта";
+                $cont = "Введите новый пароль для данного аккаунта";
                 break;
 
             case "gang_change_mail":
-                $head = "Смена пароля для <b>"+ $data.name +"</b>";
+                $head = "Смена почты и логина для <b>"+ $data.name +"</b>";
                 $cont = "Введите новый email для данного аккаунта.<br><b>Внимание:</b> логин аккаунта также будет изменен на новое значение email'а.";
                 break;
 
