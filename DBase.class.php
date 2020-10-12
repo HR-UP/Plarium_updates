@@ -6,9 +6,9 @@ header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
 define("SEC_PER_DAY", 60 * 60 * 24);
+define("FOLDER",""); // change this
 
 define("SERV_LOG_FILE","log.txt");
-define("FOLDER",""); // change this
 define("SUPP_LOG_FILE","support_reports.txt");
 define("COMMENTS_FILE","user_feedback.txt");
 define("TEMP_DATA_DIR", "temp_data");
