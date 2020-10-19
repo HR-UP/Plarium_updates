@@ -526,7 +526,7 @@ function qb_adapt_update_structure(qb_ord) {
                 //let comp_ord = get_comp_ord_from_comp_id(comp_id);
 
                 // Add slots for new/absent COMP
-                if (!struct.c_list.hasOwnProperty(comp_id))
+                if (!struct.c_list.hasOwnProperty(comp_id) || !struct.c_list[comp_id])
                 {
                     struct.c_list[comp_id] = qb_adapt_bld_comp_structure();
                     struct.is_saved = 0; // new element - mark qb adaptive structure as unsaved
@@ -534,7 +534,7 @@ function qb_adapt_update_structure(qb_ord) {
                 }
 
                 // Add slots for new/absent QST
-                if (!struct.q_list.hasOwnProperty(qid))
+                if (!struct.q_list.hasOwnProperty(qid) || !struct.q_list[qid])
                 {
                     struct.q_list[qid] = qb_adapt_bld_qst_structure(qid);
                     struct.is_saved = 0; // new element - mark qb adaptive structure as unsaved
