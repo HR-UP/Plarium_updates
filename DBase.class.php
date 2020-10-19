@@ -6,8 +6,8 @@ header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
 define("SEC_PER_DAY", 60 * 60 * 24);
-define("FOLDER",""); // change this
 
+define("FOLDER","");
 define("SERV_LOG_FILE","log.txt");
 define("SUPP_LOG_FILE","support_reports.txt");
 define("COMMENTS_FILE","user_feedback.txt");
@@ -33,7 +33,7 @@ class DBase{
     public  $recData;
 
 //****--------------------------------------------------------------------------------------------------------------****
-     function __construct(){
+    function __construct(){
     }
 //****--------------------------------------------------------------------------------------------------------------****
     function build_link($indexes)
@@ -57,27 +57,27 @@ class DBase{
 
         if ($mode === "deli"){
             $res .= " class='prj_new_ddDeli'>";
-                $res .= "<option>не выбрано</option>";
-                for ($i=0; $i<count($_SESSION["delis"]); $i++){
-                    $name = $_SESSION['delis'][$i][1];
-                    $res .= "<option>$name</option>";
-                }
+            $res .= "<option>не выбрано</option>";
+            for ($i=0; $i<count($_SESSION["delis"]); $i++){
+                $name = $_SESSION['delis'][$i][1];
+                $res .= "<option>$name</option>";
+            }
         }
         elseif ($mode === "qbook"){
             $res .= " class='prj_new_ddQbook'>";
-                $res .= "<option>не выбрано</option>";
-                for ($i=0; $i<count($_SESSION["qbooks"]); $i++){
-                    $name = $_SESSION['qbooks'][$i][0];
-                    $res .= "<option>$name</option>";
-                }
+            $res .= "<option>не выбрано</option>";
+            for ($i=0; $i<count($_SESSION["qbooks"]); $i++){
+                $name = $_SESSION['qbooks'][$i][0];
+                $res .= "<option>$name</option>";
+            }
         }
         elseif ($mode === "ans_scheme"){
             $res .= " class='prj_new_ddAnsSch'>";
-                $res .= "<option>не выбрано</option>";
-                for ($i=0; $i<count($_SESSION["ansSchemes"]); $i++){
-                    $name = $_SESSION['ansSchemes'][$i][1];
-                    $res .= "<option>$name</option>";
-                }
+            $res .= "<option>не выбрано</option>";
+            for ($i=0; $i<count($_SESSION["ansSchemes"]); $i++){
+                $name = $_SESSION['ansSchemes'][$i][1];
+                $res .= "<option>$name</option>";
+            }
         }
         elseif ($mode === "categories"){
             if ($ind*1 === 0) return "самооценка";
@@ -401,146 +401,146 @@ class DBase{
         switch ($action)
         {
             case "login":
-            {
-                unset ($_SESSION["pers"]);
-                $log_data = json_decode($info, true);
-                $q = null;
-                $access_overwrite = null;
-                $watcher_id = null;
-                // REGULAR LOGIN
-                if (isset($log_data['login']) && isset($log_data['pass']))
                 {
-                    $log_data['login'] = shield($log_data['login']);
-                    $log_data['pass'] = encrypt(shield($log_data['pass']));
-                    // ?
-
-                    $q = $this->send_query("SELECT id, login, name, spec, comp, cd, ud, mail, last_log, added_by, access, region, phone, valid, tags, focus_charges, watcher_id ".
-                        "FROM pers ".
-                        "WHERE login = '".$log_data['login']."' ".
-                        "AND pass = '".$log_data['pass']."'");
-                }
-                elseif (isset($log_data['wid']))
-                {
-                    //$access_overwrite
-                    $wid = $log_data['wid'];
-                    $z = $this->send_query("SELECT id, madeby, access_id FROM watchers WHERE wkey = '$wid'");
-                    $bro = $z->fetch(PDO::FETCH_ASSOC);
-                    $pers_id = $bro["madeby"] * 1;
-                    $access_overwrite = $bro["access_id"] * 1;
-                    $watcher_id = $bro["id"] * 1;
-                    $q = $this->send_query("SELECT id, login, name, spec, comp, cd, ud, mail, last_log, added_by, access, region, phone, valid, tags, focus_charges, watcher_id ".
-                        "FROM pers ".
-                        "WHERE id = '$pers_id'");
-                }
-
-                if ($q)
-                {
-                    $data = array();
-                    while ($bro = $q->fetch(PDO::FETCH_ASSOC))
+                    unset ($_SESSION["pers"]);
+                    $log_data = json_decode($info, true);
+                    $q = null;
+                    $access_overwrite = null;
+                    $watcher_id = null;
+                    // REGULAR LOGIN
+                    if (isset($log_data['login']) && isset($log_data['pass']))
                     {
-                        $bro = digitize($bro, array("id","cd","ud","last_log","added_by","access","valid","focus_charges","watcher_id"));
-                        if ($bro["tags"])
-                            $bro["tags"] = json_decode($bro["tags"], true);
-                        else
-                            $bro["tags"] = array();
+                        $log_data['login'] = shield($log_data['login']);
+                        $log_data['pass'] = encrypt(shield($log_data['pass']));
+                        // ?
 
-                        if (null !== $access_overwrite)
-                            $bro["access"] = $access_overwrite;
-
-                        $bro["wid"] = $watcher_id;
-
-                        //if ($bro["dirs"]) $bro["dirs"] = json_decode($bro["dirs"], true);
-                        array_push($data, $bro);
+                        $q = $this->send_query("SELECT id, login, name, spec, comp, cd, ud, mail, last_log, added_by, access, region, phone, valid, tags, focus_charges, watcher_id ".
+                            "FROM pers ".
+                            "WHERE login = '".$log_data['login']."' ".
+                            "AND pass = '".$log_data['pass']."'");
+                    }
+                    elseif (isset($log_data['wid']))
+                    {
+                        //$access_overwrite
+                        $wid = $log_data['wid'];
+                        $z = $this->send_query("SELECT id, madeby, access_id FROM watchers WHERE wkey = '$wid'");
+                        $bro = $z->fetch(PDO::FETCH_ASSOC);
+                        $pers_id = $bro["madeby"] * 1;
+                        $access_overwrite = $bro["access_id"] * 1;
+                        $watcher_id = $bro["id"] * 1;
+                        $q = $this->send_query("SELECT id, login, name, spec, comp, cd, ud, mail, last_log, added_by, access, region, phone, valid, tags, focus_charges, watcher_id ".
+                            "FROM pers ".
+                            "WHERE id = '$pers_id'");
                     }
 
-                    // error: more then 1 user matched the given login info
-                    if (count($data) !== 1)
+                    if ($q)
                     {
-                        log_add("pers->$action: ".count($data)." entries match one login+password combination!");
-                        echo null;
-                    }
-                    elseif (count($data) === 1)
-                    {
-                        // Set auth cookie for 20 hrs
-                        if (!setcookie("is_logged",true,time()+14400))
-                            log_add("pers->$action: auth cookie was not set!");
-
-                        $_SESSION["auth_data"] = $data;
-                        // set all data of logged user into handy session array
-                        $_SESSION["pers"] = array();
-                        foreach ($data[0] as $key => $val)
-                            $_SESSION["pers"][$key] = $val;
-                        $_SESSION["pers"]["last_log"] = time();
-                        $_SESSION["pers"]["gang"] = null;
-
-                        if ($_SESSION["pers"]["id"]*1 === -1)
+                        $data = array();
+                        while ($bro = $q->fetch(PDO::FETCH_ASSOC))
                         {
-                            $q = $this->send_query("SELECT name, cd, last_log, mail FROM pers WHERE NOT id = -1");
-                            $list = array();
-                            while ($bro = $q->fetch(PDO::FETCH_ASSOC))
+                            $bro = digitize($bro, array("id","cd","ud","last_log","added_by","access","valid","focus_charges","watcher_id"));
+                            if ($bro["tags"])
+                                $bro["tags"] = json_decode($bro["tags"], true);
+                            else
+                                $bro["tags"] = array();
+
+                            if (null !== $access_overwrite)
+                                $bro["access"] = $access_overwrite;
+
+                            $bro["wid"] = $watcher_id;
+
+                            //if ($bro["dirs"]) $bro["dirs"] = json_decode($bro["dirs"], true);
+                            array_push($data, $bro);
+                        }
+
+                        // error: more then 1 user matched the given login info
+                        if (count($data) !== 1)
+                        {
+                            log_add("pers->$action: ".count($data)." entries match one login+password combination!");
+                            echo null;
+                        }
+                        elseif (count($data) === 1)
+                        {
+                            // Set auth cookie for 20 hrs
+                            if (!setcookie("is_logged",true,time()+14400))
+                                log_add("pers->$action: auth cookie was not set!");
+
+                            $_SESSION["auth_data"] = $data;
+                            // set all data of logged user into handy session array
+                            $_SESSION["pers"] = array();
+                            foreach ($data[0] as $key => $val)
+                                $_SESSION["pers"][$key] = $val;
+                            $_SESSION["pers"]["last_log"] = time();
+                            $_SESSION["pers"]["gang"] = null;
+
+                            if ($_SESSION["pers"]["id"]*1 === -1)
                             {
-                                $bro = digitize($bro, array("cd","last_log"));
-                                $bro["name"] = str_replace("☼"," ", $bro["name"]);
+                                $q = $this->send_query("SELECT name, cd, last_log, mail FROM pers WHERE NOT id = -1");
+                                $list = array();
+                                while ($bro = $q->fetch(PDO::FETCH_ASSOC))
+                                {
+                                    $bro = digitize($bro, array("cd","last_log"));
+                                    $bro["name"] = str_replace("☼"," ", $bro["name"]);
 
-                                array_push($list, $bro);
+                                    array_push($list, $bro);
+                                }
+                                $_SESSION["pers"]["gang"] = $list;
                             }
-                            $_SESSION["pers"]["gang"] = $list;
+
+                            // Detect if this is slave-acc or admin
+                            if ($_SESSION["pers"]["added_by"])
+                            {
+                                // Get focus charges amount from the master-entry
+                                $z = $this->send_query("SELECT focus_charges FROM pers WHERE id = ". ($_SESSION["pers"]["added_by"] * 1));
+                                $d = $z->fetchAll(PDO::FETCH_ASSOC);
+                                $_SESSION["pers"]["focus_charges"] = intval($d[0]["focus_charges"]);
+                            }
+
+                            // Load letter templates
+                            // Create dir and get/create the file
+                            if (!is_dir(LETTER_TEMPLATES_DIR))
+                                mkdir(LETTER_TEMPLATES_DIR, 0777, true);
+
+                            $filename = LETTER_TEMPLATES_DIR ."/letemps_" . $_SESSION["pers"]["id"] . ".txt";
+                            if (!file_exists($filename))
+                            {
+                                $_SESSION["pers"]["letemps_list"] = array();
+                                file_put_contents($filename, json_encode(array()));
+                            }
+                            else
+                                $_SESSION["pers"]["letemps_list"] = json_decode(file_get_contents($filename));
+
+
+                            if (isset($log_data['login']) && isset($log_data['pass']))
+                                $this->send_query("UPDATE pers SET last_log = ".time()." WHERE login = '".$log_data['login']."' AND pass = '".$log_data['pass']."'");
+
+                            // Get catalogs structure
+                            $filename = TEMP_DATA_DIR ."/dirs_".$_SESSION["pers"]["id"] . ".txt";
+                            if (file_exists($filename))
+                                $_SESSION["pers"]["dirs"] = json_decode(file_get_contents($filename), true);
+                            else
+                                $_SESSION["pers"]["dirs"] = array(
+                                    "di_id" => 0,
+                                    "de_id" => 0,
+                                    "br_id" => 0,
+                                    "tm_id" => 0,
+                                    "st_id" => 0,
+                                    "sp_id" => 0,
+                                    "gr_id" => 0,
+                                    "di_list" => array(),
+                                    "de_list" => array(),
+                                    "br_list" => array(),
+                                    "tm_list" => array(),
+                                    "st_list" => array(),
+                                    "sp_list" => array(),
+                                    "gr_list" => array()
+                                );
+
+                            echo json_encode($_SESSION["pers"], JSON_UNESCAPED_UNICODE);
                         }
-
-                        // Detect if this is slave-acc or admin
-                        if ($_SESSION["pers"]["added_by"])
-                        {
-                            // Get focus charges amount from the master-entry
-                            $z = $this->send_query("SELECT focus_charges FROM pers WHERE id = ". ($_SESSION["pers"]["added_by"] * 1));
-                            $d = $z->fetchAll(PDO::FETCH_ASSOC);
-                            $_SESSION["pers"]["focus_charges"] = intval($d[0]["focus_charges"]);
-                        }
-
-                        // Load letter templates
-                        // Create dir and get/create the file
-                        if (!is_dir(LETTER_TEMPLATES_DIR))
-                            mkdir(LETTER_TEMPLATES_DIR, 0777, true);
-
-                        $filename = LETTER_TEMPLATES_DIR ."/letemps_" . $_SESSION["pers"]["id"] . ".txt";
-                        if (!file_exists($filename))
-                        {
-                            $_SESSION["pers"]["letemps_list"] = array();
-                            file_put_contents($filename, json_encode(array()));
-                        }
-                        else
-                            $_SESSION["pers"]["letemps_list"] = json_decode(file_get_contents($filename));
-
-
-                        if (isset($log_data['login']) && isset($log_data['pass']))
-                            $this->send_query("UPDATE pers SET last_log = ".time()." WHERE login = '".$log_data['login']."' AND pass = '".$log_data['pass']."'");
-
-                        // Get catalogs structure
-                        $filename = TEMP_DATA_DIR ."/dirs_".$_SESSION["pers"]["id"] . ".txt";
-                        if (file_exists($filename))
-                            $_SESSION["pers"]["dirs"] = json_decode(file_get_contents($filename), true);
-                        else
-                            $_SESSION["pers"]["dirs"] = array(
-                                "di_id" => 0,
-                                "de_id" => 0,
-                                "br_id" => 0,
-                                "tm_id" => 0,
-                                "st_id" => 0,
-                                "sp_id" => 0,
-                                "gr_id" => 0,
-                                "di_list" => array(),
-                                "de_list" => array(),
-                                "br_list" => array(),
-                                "tm_list" => array(),
-                                "st_list" => array(),
-                                "sp_list" => array(),
-                                "gr_list" => array()
-                            );
-
-                        echo json_encode($_SESSION["pers"], JSON_UNESCAPED_UNICODE);
                     }
+                    break;
                 }
-                break;
-            }
 
             case "refresh": // update focus_charges to session
                 {
@@ -568,144 +568,144 @@ class DBase{
                 }
 
             case "update":
-            {
-                $upd = json_decode($info, true);
-                $upd["ud"] = time();
-                $upd["id"] *= 1;
-                if (isset($upd["pass_new"]))
-                    $upd["pass_new"] = encrypt(shield($upd["pass_new"]));
-                // By this we will search entry
-                if (isset($upd["pass"]))
-                    $upd["pass"] = encrypt(shield($upd["pass"]));
-
-                $condition = "WHERE ";
-                // Prev pass is correct
-                if (intval($upd["id"]) === intval($_SESSION["pers"]["id"]))
-                    $condition .= " pass = '".$upd["pass"]."' AND id = " . intval($upd["id"]);
-                // If this is sub-admins entry and i'm an super-admin
-                elseif (intval($upd["id"]) !== intval($_SESSION["pers"]["id"]) && intval($_SESSION["pers"]["id"]) === -1)
-                    $condition .= " id = " . intval($upd["id"]);
-
-                $set_str = "";
-                $cntr = 0;
-                foreach($upd as $key => $val)
-                    if (in_array($key, array("login", "name", "access", "spec", "phone", "comp", "branch", "ud", "mail", "pass_new", "valid")))
-                    {
-                        if ($cntr)
-                            $set_str .= ", ";
-                        $cntr++;
-
-                        $db_key = $key;
-                        // Adapt new pass as main pass
-                        if ($key === "pass_new")
-                            $db_key = "pass";
-
-                        // numeric vals
-                        if ($key === "ud")
-                            $set_str .= " " .$db_key ."=". $val." ";
-                        // string vals
-                        else
-                            $set_str .= " " .$db_key ."='". $val."' ";
-                    }
-
-                $q = $this->send_query("UPDATE pers SET $set_str $condition");
-                if ($q)
-                    $q = $q->rowCount();
-
-                if (isset($q) && $q === 1)
                 {
-                    // update self info
-                    if ($upd["id"]*1 === $_SESSION["pers"]["id"]*1)
-                    {
-                        $upd["pass"] = $upd["pass_new"];
-                        unset($upd["pass_new"]);
+                    $upd = json_decode($info, true);
+                    $upd["ud"] = time();
+                    $upd["id"] *= 1;
+                    if (isset($upd["pass_new"]))
+                        $upd["pass_new"] = encrypt(shield($upd["pass_new"]));
+                    // By this we will search entry
+                    if (isset($upd["pass"]))
+                        $upd["pass"] = encrypt(shield($upd["pass"]));
 
-                        foreach ($upd as $key => $val)
-                            $_SESSION["pers"][$key] = $val;
-                        // Prevent 'pass' field from going to client
-                        $pass = $_SESSION["pers"]["pass"];
-                        unset($_SESSION["pers"]["pass"]);
-                        echo json_encode($_SESSION["pers"], JSON_UNESCAPED_UNICODE);
-                        // Bring pass field back
-                        $_SESSION["pers"]["pass"] = $pass;
-                    }
-                    // update crew array info
-                    else
-                    {
-                        // retrieve local index of editable fella
-                        $id = $upd["iid"] * 1;
-                        // remove shortcut-dummy entries for not spamming them to Session var
-                        unset($upd["iid"]);
-                        if (is_int($id))
+                    $condition = "WHERE ";
+                    // Prev pass is correct
+                    if (intval($upd["id"]) === intval($_SESSION["pers"]["id"]))
+                        $condition .= " pass = '".$upd["pass"]."' AND id = " . intval($upd["id"]);
+                    // If this is sub-admins entry and i'm an super-admin
+                    elseif (intval($upd["id"]) !== intval($_SESSION["pers"]["id"]) && intval($_SESSION["pers"]["id"]) === -1)
+                        $condition .= " id = " . intval($upd["id"]);
+
+                    $set_str = "";
+                    $cntr = 0;
+                    foreach($upd as $key => $val)
+                        if (in_array($key, array("login", "name", "access", "spec", "phone", "comp", "branch", "ud", "mail", "pass_new", "valid")))
                         {
-                            // refresh all editable pers data inside session array
-                            foreach ($upd as $key => $val)
-                                $_SESSION["crew"][$id][$key] = $val;
-                            // send fresh data on this pers to sync it with front end
-                            echo json_encode($_SESSION["crew"][$id], JSON_UNESCAPED_UNICODE);
+                            if ($cntr)
+                                $set_str .= ", ";
+                            $cntr++;
+
+                            $db_key = $key;
+                            // Adapt new pass as main pass
+                            if ($key === "pass_new")
+                                $db_key = "pass";
+
+                            // numeric vals
+                            if ($key === "ud")
+                                $set_str .= " " .$db_key ."=". $val." ";
+                            // string vals
+                            else
+                                $set_str .= " " .$db_key ."='". $val."' ";
                         }
+
+                    $q = $this->send_query("UPDATE pers SET $set_str $condition");
+                    if ($q)
+                        $q = $q->rowCount();
+
+                    if (isset($q) && $q === 1)
+                    {
+                        // update self info
+                        if ($upd["id"]*1 === $_SESSION["pers"]["id"]*1)
+                        {
+                            $upd["pass"] = $upd["pass_new"];
+                            unset($upd["pass_new"]);
+
+                            foreach ($upd as $key => $val)
+                                $_SESSION["pers"][$key] = $val;
+                            // Prevent 'pass' field from going to client
+                            $pass = $_SESSION["pers"]["pass"];
+                            unset($_SESSION["pers"]["pass"]);
+                            echo json_encode($_SESSION["pers"], JSON_UNESCAPED_UNICODE);
+                            // Bring pass field back
+                            $_SESSION["pers"]["pass"] = $pass;
+                        }
+                        // update crew array info
                         else
                         {
-                            log_add("pers->update: invalid index of updatable resp");
-                            echo "fail";
+                            // retrieve local index of editable fella
+                            $id = $upd["iid"] * 1;
+                            // remove shortcut-dummy entries for not spamming them to Session var
+                            unset($upd["iid"]);
+                            if (is_int($id))
+                            {
+                                // refresh all editable pers data inside session array
+                                foreach ($upd as $key => $val)
+                                    $_SESSION["crew"][$id][$key] = $val;
+                                // send fresh data on this pers to sync it with front end
+                                echo json_encode($_SESSION["crew"][$id], JSON_UNESCAPED_UNICODE);
+                            }
+                            else
+                            {
+                                log_add("pers->update: invalid index of updatable resp");
+                                echo "fail";
+                            }
                         }
                     }
+                    // Entry in DB wasn't successfully updated
+                    else
+                        echo "fail";
+                    break;
                 }
-                // Entry in DB wasn't successfully updated
-                else
-                    echo "fail";
-                break;
-            }
 
             case "crew_list":
-            {
-                $q = $this->send_query("SELECT id, login, name, spec, cd, ud, mail, last_log, added_by, access, phone, branch, comp, emplo_qnt, valid FROM pers WHERE NOT access = 10 ORDER BY cd DESC");// ORDER BY cd DESC
-
-                if ($q)
                 {
-                    $data = array();
-                    while ($bro = $q->fetch(PDO::FETCH_ASSOC))
-                        array_push($data, $bro);
-                    // no crew data (there is not a single entry except the lead-admin)
-                    if (count($data) === 0)
+                    $q = $this->send_query("SELECT id, login, name, spec, cd, ud, mail, last_log, added_by, access, phone, branch, comp, emplo_qnt, valid FROM pers WHERE NOT access = 10 ORDER BY cd DESC");// ORDER BY cd DESC
+
+                    if ($q)
                     {
-                        $crew_list = null;
+                        $data = array();
+                        while ($bro = $q->fetch(PDO::FETCH_ASSOC))
+                            array_push($data, $bro);
+                        // no crew data (there is not a single entry except the lead-admin)
+                        if (count($data) === 0)
+                        {
+                            $crew_list = null;
+                        }
+                        else
+                        {
+                            $crew_list = array();
+                            foreach ($data as $pers)
+                            {
+                                array_push($crew_list, array(
+                                    "id" => $pers["id"] * 1,
+                                    "login" => $pers["login"],
+                                    "name" => $pers["name"],
+                                    "spec" => $pers["spec"],
+                                    "comp" => $pers["comp"],
+                                    "branch" => $pers["branch"],
+                                    "emplo_qnt" => intval($pers["emplo_qnt"]),
+                                    "cd" => $pers["cd"] * 1,
+                                    "ud" => $pers["ud"] * 1,
+                                    "mail" => $pers["mail"],
+                                    "phone" => $pers["phone"],
+                                    "last_log" => $pers["last_log"] * 1,
+                                    "added_by" => $pers["added_by"] * 1,
+                                    "access" => $pers["access"] * 1,
+                                    "valid" => $pers["valid"]
+                                ));
+                            }
+                        }
+
+                        $_SESSION["crew"] = $crew_list;
+                        return $_SESSION["crew"];
                     }
                     else
                     {
-                        $crew_list = array();
-                        foreach ($data as $pers)
-                        {
-                            array_push($crew_list, array(
-                                "id" => $pers["id"] * 1,
-                                "login" => $pers["login"],
-                                "name" => $pers["name"],
-                                "spec" => $pers["spec"],
-                                "comp" => $pers["comp"],
-                                "branch" => $pers["branch"],
-                                "emplo_qnt" => intval($pers["emplo_qnt"]),
-                                "cd" => $pers["cd"] * 1,
-                                "ud" => $pers["ud"] * 1,
-                                "mail" => $pers["mail"],
-                                "phone" => $pers["phone"],
-                                "last_log" => $pers["last_log"] * 1,
-                                "added_by" => $pers["added_by"] * 1,
-                                "access" => $pers["access"] * 1,
-                                "valid" => $pers["valid"]
-                            ));
-                        }
+                        log_add("pers->login: empty Database data on Crew list request!");
+                        return null;
                     }
-
-                    $_SESSION["crew"] = $crew_list;
-                    return $_SESSION["crew"];
+                    break;
                 }
-                else
-                {
-                    log_add("pers->login: empty Database data on Crew list request!");
-                    return null;
-                }
-                break;
-            }
 
             case "full_list":
                 {
@@ -758,41 +758,41 @@ class DBase{
                 }
 
             case "new":
-            {
-                $new_pers = json_decode($info, true);
-                $new_pers["cd"] = time();
-                $new_pers["ud"] = time();
-                $pass = encrypt($new_pers["pass"]);
-                //$new_pers["pass"] = encrypt("000"); // set default password
-                $new_pers["access"] = 5;
-                $new_pers["last_log"] = 0;
-                //$new_pers["key"] = $this->doKey(19, "pers");
-                if (isset($_SESSION["pers"]) && isset($_SESSION["pers"]["id"]))
-                    $new_pers["added_by"] = $_SESSION["pers"]["id"];
-                else
-                    $new_pers["added_by"] = 0;
-
-                // Check for mail duplication
-                $mail_is_duplicate = false;
-                $q = $this->send_query("SELECT mail FROM pers");
-                $mails_list = array();
-                if ($q)
                 {
-                    while ($entry = $q->fetch(PDO::FETCH_ASSOC))
-                        array_push($mails_list, trim(strtolower($entry["mail"])));
-                    $reg_mail = trim(strtolower($new_pers["mail"]));
+                    $new_pers = json_decode($info, true);
+                    $new_pers["cd"] = time();
+                    $new_pers["ud"] = time();
+                    $pass = encrypt($new_pers["pass"]);
+                    //$new_pers["pass"] = encrypt("000"); // set default password
+                    $new_pers["access"] = 5;
+                    $new_pers["last_log"] = 0;
+                    //$new_pers["key"] = $this->doKey(19, "pers");
+                    if (isset($_SESSION["pers"]) && isset($_SESSION["pers"]["id"]))
+                        $new_pers["added_by"] = $_SESSION["pers"]["id"];
+                    else
+                        $new_pers["added_by"] = 0;
 
-                    foreach ($mails_list as $mail)
-                        if ($mail === $reg_mail)
-                        {
-                            $mail_is_duplicate = true;
-                            break;
-                        }
-                }
+                    // Check for mail duplication
+                    $mail_is_duplicate = false;
+                    $q = $this->send_query("SELECT mail FROM pers");
+                    $mails_list = array();
+                    if ($q)
+                    {
+                        while ($entry = $q->fetch(PDO::FETCH_ASSOC))
+                            array_push($mails_list, trim(strtolower($entry["mail"])));
+                        $reg_mail = trim(strtolower($new_pers["mail"]));
 
-                if (!$mail_is_duplicate)
-                {
-                    $q = $this->send_query("INSERT INTO pers SET
+                        foreach ($mails_list as $mail)
+                            if ($mail === $reg_mail)
+                            {
+                                $mail_is_duplicate = true;
+                                break;
+                            }
+                    }
+
+                    if (!$mail_is_duplicate)
+                    {
+                        $q = $this->send_query("INSERT INTO pers SET
                       login = '".shield($new_pers["login"])."',
                       name = '".shield($new_pers["fio"])."',
                       pass = '".$pass."',
@@ -807,97 +807,97 @@ class DBase{
                       valid = '0', 
                       tags = '". json_encode(array()) ."'"); // ".$new_pers["key"]." was on valid field
 
-                    if ($q)
-                    {
-                        // Get the id of the added entry
-                        $new_pers["id"] = $this->_db->lastInsertId();
-                        if (!isset($_SESSION["crew"]) || !is_array($_SESSION["crew"]))
-                            $_SESSION["crew"] = array();
-                        array_push($_SESSION["crew"], $new_pers);
-                        $this->send_confirm_letter($new_pers);
-                        unset($new_pers["pass"]);
-                        $ret = json_encode($new_pers, JSON_UNESCAPED_UNICODE);
-                    }
-                    else
-                    {
-                        log_add("resp->new: error on creating a new pers entry! $info");
-                        $ret = false;
-                    }
-                }
-                else
-                {
-                    log_add("pers->$action: mail is duplicate! $info");
-                    $ret = "mail_duplicate";
-                }
-
-                break;
-            }
-
-            case "del":
-            {
-                $pers_id = $info * 1;
-                if (is_int($pers_id) && $pers_id > 0)
-                {
-                    $q = $this->send_query("DELETE FROM pers WHERE id = $pers_id");
-
-
-                    if ($q)
-                    {
-                        $this->send_query("DELETE FROM resp WHERE pers_id = $pers_id");
-                        // refresh crew list and send it back
-                        echo json_encode($this->pers("crew_list", null, false), JSON_UNESCAPED_UNICODE);
-                    }
-                    else
-                    {
-                        log_add("resp->new: error on deleting a pers entry!");
-                        echo false;
-                    }
-                }
-                else
-                {
-                    log_add("pers->$action: invalid index of pers to delete!");
-                    echo false;
-                }
-
-                break;
-            }
-
-            case "confirm":
-            {
-                if (strlen(strval($info)) === 19)
-                {
-                    $q = $this->send_query("SELECT COUNT(name) FROM pers WHERE valid = '".$info."'");
-
-                    if ($q)
-                    {
-                        $val = $q->fetch(PDO::FETCH_NUM);
-                        file_put_contents("chk.txt", json_encode($val));
-                        if (intval($val[0]) === 1)
+                        if ($q)
                         {
-                            $this->send_query("UPDATE pers SET valid = '1' WHERE valid = '".$info."'");
-                            $ret = "done";
+                            // Get the id of the added entry
+                            $new_pers["id"] = $this->_db->lastInsertId();
+                            if (!isset($_SESSION["crew"]) || !is_array($_SESSION["crew"]))
+                                $_SESSION["crew"] = array();
+                            array_push($_SESSION["crew"], $new_pers);
+                            $this->send_confirm_letter($new_pers);
+                            unset($new_pers["pass"]);
+                            $ret = json_encode($new_pers, JSON_UNESCAPED_UNICODE);
                         }
                         else
                         {
-                            log_add("pers->$action: wrong qnt of entries selected!");
-                            
+                            log_add("resp->new: error on creating a new pers entry! $info");
+                            $ret = false;
+                        }
+                    }
+                    else
+                    {
+                        log_add("pers->$action: mail is duplicate! $info");
+                        $ret = "mail_duplicate";
+                    }
+
+                    break;
+                }
+
+            case "del":
+                {
+                    $pers_id = $info * 1;
+                    if (is_int($pers_id) && $pers_id > 0)
+                    {
+                        $q = $this->send_query("DELETE FROM pers WHERE id = $pers_id");
+
+
+                        if ($q)
+                        {
+                            $this->send_query("DELETE FROM resp WHERE pers_id = $pers_id");
+                            // refresh crew list and send it back
+                            echo json_encode($this->pers("crew_list", null, false), JSON_UNESCAPED_UNICODE);
+                        }
+                        else
+                        {
+                            log_add("resp->new: error on deleting a pers entry!");
+                            echo false;
+                        }
+                    }
+                    else
+                    {
+                        log_add("pers->$action: invalid index of pers to delete!");
+                        echo false;
+                    }
+
+                    break;
+                }
+
+            case "confirm":
+                {
+                    if (strlen(strval($info)) === 19)
+                    {
+                        $q = $this->send_query("SELECT COUNT(name) FROM pers WHERE valid = '".$info."'");
+
+                        if ($q)
+                        {
+                            $val = $q->fetch(PDO::FETCH_NUM);
+                            file_put_contents("chk.txt", json_encode($val));
+                            if (intval($val[0]) === 1)
+                            {
+                                $this->send_query("UPDATE pers SET valid = '1' WHERE valid = '".$info."'");
+                                $ret = "done";
+                            }
+                            else
+                            {
+                                log_add("pers->$action: wrong qnt of entries selected!");
+
+                                $ret = "fail";
+                            }
+                        }
+                        else
+                        {
+                            log_add("resp->$action: error on finding a pers entry!");
                             $ret = "fail";
                         }
                     }
                     else
                     {
-                        log_add("resp->$action: error on finding a pers entry!");
+                        log_add("pers->$action: wrong key format!");
                         $ret = "fail";
                     }
-                }
-                else
-                {
-                    log_add("pers->$action: wrong key format!");
-                    $ret = "fail";
-                }
 
-                break;
-            }
+                    break;
+                }
 
             case "set_tag":
                 {
@@ -1338,32 +1338,32 @@ class DBase{
         switch ($action)
         {
             case "list":
-            {
-                $_SESSION["resps"] = array();
-                $q = $this->send_query("SELECT id, fio, mail, data, spec, cd, ud, last_upd, status FROM resp WHERE madeby = $info");
+                {
+                    $_SESSION["resps"] = array();
+                    $q = $this->send_query("SELECT id, fio, mail, data, spec, cd, ud, last_upd, status FROM resp WHERE madeby = $info");
 
-                if ($q)
-                    while ($bro = $q->fetch(PDO::FETCH_ASSOC))
-                    {
-                        if ($bro["data"])
-                            $bro["data"] = json_decode($bro["data"], true);
-                        else
-                            $bro["data"] = array();
+                    if ($q)
+                        while ($bro = $q->fetch(PDO::FETCH_ASSOC))
+                        {
+                            if ($bro["data"])
+                                $bro["data"] = json_decode($bro["data"], true);
+                            else
+                                $bro["data"] = array();
 
-                        $bro = digitize($bro, array("id","cd","ud","last_upd","status"));
-                        array_push($_SESSION["resps"], $bro);
-                    }
+                            $bro = digitize($bro, array("id","cd","ud","last_upd","status"));
+                            array_push($_SESSION["resps"], $bro);
+                        }
 
-                $ans = $_SESSION["resps"];
-                break;
-            }
+                    $ans = $_SESSION["resps"];
+                    break;
+                }
 
             case "update":
-            {
-                $upd = json_decode($info, true);
-                $upd["ud"] = time();
+                {
+                    $upd = json_decode($info, true);
+                    $upd["ud"] = time();
 
-                $q = $this->send_query("UPDATE resp SET
+                    $q = $this->send_query("UPDATE resp SET
                   name = '".$upd["name"]."',
                   mail = '".$upd["mail"]."',
                   spec = '".$upd["spec"]."',
@@ -1375,157 +1375,193 @@ class DBase{
                   job_date = '".$upd["job_date"]."'
                   WHERE id = ".$upd["id"]);
 
-                if ($q)
-                {
-                    $id = $upd["iid"] * 1;
-                    // remove shortcut-dummy entries for not spamming them to Session var
-                    unset($upd["iid"]);
-                    if (is_int($id))
-                    {
-                        // refresh all editable pers data inside session array
-                        foreach ($upd as $key => $val)
-                            $_SESSION["resp"][$id][$key] = $val;
-                        // send fresh data on this pers to sync it with front end
-                        echo json_encode($_SESSION["resp"][$id], JSON_UNESCAPED_UNICODE);
-                    }
-                    else
-                    {
-                        log_add("resp->update: invalid index of updatable respondent");
-                        echo false;
-                    }
-                }
-                // Entry in DB wasn't successfully updated
-                else
-                    echo false;
-                break;
-            }
-
-            case "del":
-            {
-                $d = json_decode($info);
-                $resp_id = purify($d->resp_id, "int");
-                $pers_id = purify($d->pers_id, "int");
-                if ($pers_id && $resp_id)
-                {
-                    try
-                    {
-                        $q = $this->send_query("DELETE FROM resp WHERE id = $resp_id");
-                    }
-                        catch (PDOException $e)
-                    {
-                        log_add("resp_g->del: ". $e->getMessage());
-                    }
-
-
                     if ($q)
                     {
-                        // refresh crew list and send it back
-                        $ans = $this->resp("list", $pers_id, false);
-                        // refresh crew list and send it back
-                        $ans = json_encode($ans, JSON_UNESCAPED_UNICODE);
+                        $id = $upd["iid"] * 1;
+                        // remove shortcut-dummy entries for not spamming them to Session var
+                        unset($upd["iid"]);
+                        if (is_int($id))
+                        {
+                            // refresh all editable pers data inside session array
+                            foreach ($upd as $key => $val)
+                                $_SESSION["resp"][$id][$key] = $val;
+                            // send fresh data on this pers to sync it with front end
+                            echo json_encode($_SESSION["resp"][$id], JSON_UNESCAPED_UNICODE);
+                        }
+                        else
+                        {
+                            log_add("resp->update: invalid index of updatable respondent");
+                            echo false;
+                        }
+                    }
+                    // Entry in DB wasn't successfully updated
+                    else
+                        echo false;
+                    break;
+                }
+
+            case "del":
+                {
+                    $d = json_decode($info);
+                    $resp_id = purify($d->resp_id, "int");
+                    $pers_id = purify($d->pers_id, "int");
+                    if ($pers_id && $resp_id)
+                    {
+                        try
+                        {
+                            $q = $this->send_query("DELETE FROM resp WHERE id = $resp_id");
+                        }
+                        catch (PDOException $e)
+                        {
+                            log_add("resp_g->del: ". $e->getMessage());
+                        }
+
+
+                        if ($q)
+                        {
+                            // refresh crew list and send it back
+                            $ans = $this->resp("list", $pers_id, false);
+                            // refresh crew list and send it back
+                            $ans = json_encode($ans, JSON_UNESCAPED_UNICODE);
+                        }
+                        else
+                        {
+                            log_add("resp->del: error on deleting a resp entry!");
+                            $ans = "fail";
+                        }
                     }
                     else
                     {
-                        log_add("resp->del: error on deleting a resp entry!");
+                        if (!$pers_id)
+                            log_add("resp->del: invalid index of pers_id to delete!");
+                        if (!$resp_id)
+                            log_add("resp->del: invalid index of resp_id to delete!");
                         $ans = "fail";
                     }
+                    break;
                 }
-                else
-                {
-                    if (!$pers_id)
-                        log_add("resp->del: invalid index of pers_id to delete!");
-                    if (!$resp_id)
-                        log_add("resp->del: invalid index of resp_id to delete!");
-                    $ans = "fail";
-                }
-                break;
-            }
 
             case "import":
-            {
-                $d = json_decode($info, true);
-                $new_resps_list = $d["resps_list"];
-                $date = time();
-                $owner_id = $_SESSION["pers"]["id"] * 1;
-                $resps_id_list = array();
-                $resps_cat_list = array();
-                file_put_contents("resps_id_list.txt", json_encode($resps_id_list));
-                // UPDATE all existing resps
-                // Add all new resps (with id's === null)
-                $trans = $this->_db->prepare("UPDATE resp SET fio = ?, mail = ?, spec = ?, ud = $date, last_upd = $date WHERE id = ? AND madeby = $owner_id");
-                foreach ($new_resps_list as $focus_ord => $focus_group)
                 {
-                    array_push($resps_id_list, array());
-                    array_push($resps_cat_list, array());
-                    file_put_contents("resps_id_list.txt", "\n". json_encode($resps_id_list), FILE_APPEND);
-                    foreach ($focus_group as $resp_ord => $resp)
-                        // For existing resps only
-                        if ($resp["id"] !== null)
+                    $d = json_decode($info, true);
+                    $new_resps_list = $d["resps_list"];
+                    $date = time();
+                    $owner_id = $_SESSION["pers"]["id"] * 1;
+                    $resps_id_list = array();
+                    $resps_cat_list = array();
+                    $existing_resps = array();
+                    file_put_contents("resps_id_list.txt", json_encode($resps_id_list));
+                    // UPDATE all existing resps
+                    // Add all new resps (with id's === null)
+                    $trans = $this->_db->prepare("UPDATE resp SET fio = ?, spec = ?, ud = $date, last_upd = $date WHERE id = ? AND madeby = $owner_id");
+                    foreach ($new_resps_list as $focus_ord => $focus_group)
+                    {
+                        array_push($resps_id_list, array());
+                        array_push($resps_cat_list, array());
+                        file_put_contents("resps_id_list.txt", "\n". json_encode($resps_id_list), FILE_APPEND);
+                        foreach ($focus_group as $resp_ord => $resp)
+                            // For existing resps only
+                            if ($resp["id"] !== null)
+                            {
+                                $mail = mb_strtolower($resp["mail"]);
+                                $trans->execute(array(
+                                    $resp["fio"],
+                                    $resp["spec"],
+                                    $resp["id"]
+                                ));
+                                $resps_id_list[$focus_ord*1][$resp_ord*1] = $resp["id"];
+                                $resps_cat_list[$focus_ord*1][$resp_ord*1] = $resp["cat_id"];
+
+                                // Fill array of unique resps that are already added to not dublicate shit in DB
+                                $is_new_resp = true;
+                                if (count($existing_resps))
+                                    foreach ($existing_resps as $rslot)
+                                        if ($rslot["mail"] === $mail)
+                                        {
+                                            $is_new_resp = false;
+                                            break;
+                                        }
+
+                                if ($is_new_resp)
+                                    array_push($existing_resps, array("mail" => $mail, "id" => $resp["id"] * 1));
+                            }
+                    }
+
+                    // ADD NEW resps (with id's === null)
+                    $trans = $this->_db->prepare("INSERT resp SET fio = ?, mail = ?, spec = ?, cd = $date, ud = $date, last_upd = $date, madeby = $owner_id");
+                    foreach ($new_resps_list as $focus_ord => $focus_group)
+                        foreach ($focus_group as $resp_ord => $resp)
                         {
-                            $trans->execute(array(
-                                $resp["fio"],
-                                $resp["mail"],
-                                $resp["spec"],
-                                $resp["id"]
-                            ));
-                            $resps_id_list[$focus_ord*1][$resp_ord*1] = $resp["id"];
+                            $mail = mb_strtolower($resp["mail"]);
+                            // find if resp with that mail was already added, and get his id instead
+                            foreach ($existing_resps as $ex_resp)
+                                if ($ex_resp["mail"] === $mail)
+                                {
+                                    $resp["id"] = $ex_resp["id"];
+                                    break;
+                                }
+
+                            // For new resps only
+                            if ($resp["id"] === null)
+                            {
+                                $trans->execute(array(
+                                    $resp["fio"],
+                                    $resp["mail"],
+                                    $resp["spec"]
+                                ));
+                                $resp["id"] = $this->_db->lastInsertId() * 1; // get new resp's global id
+
+                                // Fill array of unique resps that are already added to not dublicate shit in DB
+                                $is_new_resp = true;
+                                if (count($existing_resps))
+                                    foreach ($existing_resps as $rslot)
+                                        if ($rslot["mail"] === $mail)
+                                        {
+                                            $is_new_resp = false;
+                                            break;
+                                        }
+
+                                if ($is_new_resp)
+                                    array_push($existing_resps, array("mail" => $mail, "id" => $resp["id"] * 1));
+                            }
+                            $resps_id_list[$focus_ord*1][$resp_ord*1] = $resp["id"]; // gather all new id's in same focus-groups structure
                             $resps_cat_list[$focus_ord*1][$resp_ord*1] = $resp["cat_id"];
                         }
-                }
 
-                // ADD NEW resps (with id's === null)
-                $trans = $this->_db->prepare("INSERT resp SET fio = ?, mail = ?, spec = ?, cd = $date, ud = $date, last_upd = $date, madeby = $owner_id");
-                foreach ($new_resps_list as $focus_ord => $focus_group)
-                    foreach ($focus_group as $resp_ord => $resp)
+                    $ans = array();
+                    $ans["resps"] = $this->resp("list", $owner_id, false); // recollect all resp info and send it
+
+                    // Reformat array to make indexes into a stright order, cuz apparently if the're not - json codes that array as object ffs
+                    $ans["resps_id_list"]  = array();
+                    foreach ($resps_id_list as $gr)
                     {
-                        // For new resps only
-                        if ($resp["id"] === null)
+                        $slot = array();
+                        $ord = 0;
+                        foreach ($gr as $r)
                         {
-                            $trans->execute(array(
-                                $resp["fio"],
-                                $resp["mail"],
-                                $resp["spec"]
-                            ));
-                            $resp["id"] = $this->_db->lastInsertId() * 1; // get new resp's global id
+                            array_push($slot, $gr[$ord]);
+                            $ord++;
                         }
-                        $resps_id_list[$focus_ord*1][$resp_ord*1] = $resp["id"]; // gather all new id's in same focus-groups structure
-                        $resps_cat_list[$focus_ord*1][$resp_ord*1] = $resp["cat_id"];
+                        array_push($ans["resps_id_list"], $slot);
                     }
-
-                $ans = array();
-                $ans["resps"] = $this->resp("list", $owner_id, false); // recollect all resp info and send it
-
-                // Reformat array to make indexes into a stright order, cuz apparently if the're not - json codes that array as object ffs
-                $ans["resps_id_list"]  = array();
-                foreach ($resps_id_list as $gr)
-                {
-                    $slot = array();
-                    $ord = 0;
-                    foreach ($gr as $r)
+                    $ans["resps_cat_list"] = array();
+                    foreach ($resps_cat_list as $gr)
                     {
-                        array_push($slot, $gr[$ord]);
-                        $ord++;
+                        $slot = array();
+                        $ord = 0;
+                        foreach ($gr as $r)
+                        {
+                            array_push($slot, $gr[$ord]);
+                            $ord++;
+                        }
+                        array_push($ans["resps_cat_list"], $slot);
                     }
-                    array_push($ans["resps_id_list"], $slot);
-                }
-                $ans["resps_cat_list"] = array();
-                foreach ($resps_cat_list as $gr)
-                {
-                    $slot = array();
-                    $ord = 0;
-                    foreach ($gr as $r)
-                    {
-                        array_push($slot, $gr[$ord]);
-                        $ord++;
-                    }
-                    array_push($ans["resps_cat_list"], $slot);
-                }
 
-                //$ans["insert_pos"] = $d["insert_pos"] * 1;
-                $ans["edited_ord"] = $d["edited_ord"];
-                $ans = json_encode($ans, JSON_UNESCAPED_UNICODE);
-                break;
-            }
+                    //$ans["insert_pos"] = $d["insert_pos"] * 1;
+                    $ans["edited_ord"] = $d["edited_ord"];
+                    $ans = json_encode($ans, JSON_UNESCAPED_UNICODE);
+                    break;
+                }
 
             case "new":
                 {
@@ -1618,10 +1654,10 @@ class DBase{
 
                                 // Slot to check progress of resp
                                 $chk_slot = [];
-                                    $chk_slot["resps"] = $qz["resps"];
-                                    $chk_slot["settings"] = $qz["settings"];
-                                    $chk_slot["gr_ord"] = $ans["group_ord"];
-                                    $chk_slot["resp_ord"] = $ans["resp_ord"];
+                                $chk_slot["resps"] = $qz["resps"];
+                                $chk_slot["settings"] = $qz["settings"];
+                                $chk_slot["gr_ord"] = $ans["group_ord"];
+                                $chk_slot["resp_ord"] = $ans["resp_ord"];
 
                                 if ($resp["ord"] === null)
                                     $ans["error"] = "Нет такого респондента в опросе.";
@@ -1767,7 +1803,7 @@ class DBase{
                         $data = $q->fetchAll(PDO::FETCH_ASSOC);
                         file_put_contents($file, " \n count of quizes by a key: ". count($data), FILE_APPEND);
                         if (count($data) !== 1)
-                           $ans = false;
+                            $ans = false;
                         else
                         {
                             file_put_contents($file, " \n qz count match: ", FILE_APPEND);
@@ -2072,85 +2108,85 @@ class DBase{
         {
 
             case "list":
-            {
-                $q = $this->send_query("SELECT group_id, resp_id, qst_id, qz_key, iter_key, cd, ans_val, ans_pts, qst_ord, ans_ord FROM results");
-
-                if ($q)
                 {
-                    $owner_id = $this->set_owner_id();
-                    $_SESSION["results"] = array();
-                    $res_data = array();
-                    while ($bro = $q->fetch(PDO::FETCH_ASSOC))
-                        array_push($res_data, $bro);
-                    // no crew data (there is not a single entry except the lead-admin)
-                    foreach ($res_data as $line)
+                    $q = $this->send_query("SELECT group_id, resp_id, qst_id, qz_key, iter_key, cd, ans_val, ans_pts, qst_ord, ans_ord FROM results");
+
+                    if ($q)
                     {
-                        $line["group_id"] *= 1;
-                        $line["resp_id"] *= 1;
-                        $line["qst_id"] *= 1;
-                        $line["cd"] *= 1;
-                        $line["ans_val"] *= 1;
-                        $line["ans_pts"] *= 1;
-                        $line["qst_ord"] *= 1;
-                        $line["ans_ord"] *= 1;
+                        $owner_id = $this->set_owner_id();
+                        $_SESSION["results"] = array();
+                        $res_data = array();
+                        while ($bro = $q->fetch(PDO::FETCH_ASSOC))
+                            array_push($res_data, $bro);
+                        // no crew data (there is not a single entry except the lead-admin)
+                        foreach ($res_data as $line)
+                        {
+                            $line["group_id"] *= 1;
+                            $line["resp_id"] *= 1;
+                            $line["qst_id"] *= 1;
+                            $line["cd"] *= 1;
+                            $line["ans_val"] *= 1;
+                            $line["ans_pts"] *= 1;
+                            $line["qst_ord"] *= 1;
+                            $line["ans_ord"] *= 1;
 
-                        // Filter out all the results that belong to other users
-                        // try Validate by groups
-                        $is_owned = false;
-                        if (isset($_SESSION["resp_g"]))
-                            foreach ($_SESSION["resp_g"] as $group)
-                                if(intval($group["id"]) === $line["group_id"] && $group["pers_id"] === $owner_id)
-                                {
-                                    $is_owned = true;
-                                    break;
-                                }
-                        // try Validate by resps
-                        if (!$is_owned && isset($_SESSION["resp"]))
-                            foreach ($_SESSION["resp"] as $resp)
-                                if(intval($resp["id"]) === $line["resp_id"] && $resp["pers_id"] === $owner_id)
-                                {
-                                    $is_owned = true;
-                                    break;
-                                }
-                        // try Validate by questions
-                        if (!$is_owned && isset($_SESSION["qst"]))
-                            foreach ($_SESSION["qst"] as $qst)
-                                if(intval($qst["id"]) === $line["resp_id"] && $qst["pers_id"] === $owner_id)
-                                {
-                                    $is_owned = true;
-                                    break;
-                                }
+                            // Filter out all the results that belong to other users
+                            // try Validate by groups
+                            $is_owned = false;
+                            if (isset($_SESSION["resp_g"]))
+                                foreach ($_SESSION["resp_g"] as $group)
+                                    if(intval($group["id"]) === $line["group_id"] && $group["pers_id"] === $owner_id)
+                                    {
+                                        $is_owned = true;
+                                        break;
+                                    }
+                            // try Validate by resps
+                            if (!$is_owned && isset($_SESSION["resp"]))
+                                foreach ($_SESSION["resp"] as $resp)
+                                    if(intval($resp["id"]) === $line["resp_id"] && $resp["pers_id"] === $owner_id)
+                                    {
+                                        $is_owned = true;
+                                        break;
+                                    }
+                            // try Validate by questions
+                            if (!$is_owned && isset($_SESSION["qst"]))
+                                foreach ($_SESSION["qst"] as $qst)
+                                    if(intval($qst["id"]) === $line["resp_id"] && $qst["pers_id"] === $owner_id)
+                                    {
+                                        $is_owned = true;
+                                        break;
+                                    }
 
-                        if ($is_owned)
-                            array_push($_SESSION["results"], $line);
+                            if ($is_owned)
+                                array_push($_SESSION["results"], $line);
+                        }
+                        return $_SESSION["results"];
                     }
-                    return $_SESSION["results"];
+                    else
+                    {
+                        log_add("results->list: empty Database data on request!");
+                        return null;
+                    }
+                    break;
                 }
-                else
-                {
-                    log_add("results->list: empty Database data on request!");
-                    return null;
-                }
-                break;
-            }
 
             case "save_answer":
-            {
-                $data = json_decode($info, true);
-                $key_str = $data["key"];
-                $key = array();
-                $key["resp"] = substr($key_str, 10, 10);
-                $key["qz"] = substr($key_str, 20, 10);
-                $key["iter"] = substr($key_str, 30, 10);
-                $resp_id = $data["resp_id"] * 1;
-                if (!isset($data["ans_ord"]))
-                    $data["ans_ord"] = null;
-
-                if ($data["op_type"] === "insert")
                 {
-                    try
+                    $data = json_decode($info, true);
+                    $key_str = $data["key"];
+                    $key = array();
+                    $key["resp"] = substr($key_str, 10, 10);
+                    $key["qz"] = substr($key_str, 20, 10);
+                    $key["iter"] = substr($key_str, 30, 10);
+                    $resp_id = $data["resp_id"] * 1;
+                    if (!isset($data["ans_ord"]))
+                        $data["ans_ord"] = null;
+
+                    if ($data["op_type"] === "insert")
                     {
-                        $q = $this->send_query("INSERT INTO results SET
+                        try
+                        {
+                            $q = $this->send_query("INSERT INTO results SET
                             qst_id = " . $data["qst_id"] . ",
                             ans_val = " . $data["ans_val"] . ",
                             ans_pts = '" . $data["ans_pts"] . "',
@@ -2161,258 +2197,258 @@ class DBase{
                             qz_key = '" . $key["qz"] . "',
                             iter_key = '" . $key["iter"] . "',
                             cd = " . time());
-                    } catch (PDOException $e) {
-                        log_add("resp->save_answer, insert: " . $e->getMessage());
+                        } catch (PDOException $e) {
+                            log_add("resp->save_answer, insert: " . $e->getMessage());
+                        }
                     }
-                }
-                else
-                {
-                    try
+                    else
                     {
-                        $q = $this->send_query("UPDATE results SET
+                        try
+                        {
+                            $q = $this->send_query("UPDATE results SET
                             ans_val = " . $data["ans_val"] . ",
                             ans_pts = '" . $data["ans_pts"] . "',
                             qst_ord = '" . $data["qst_ord"] . "',
                             cd = " . time() .
-                            " WHERE resp_id = ". $data["resp_id"]. "
+                                " WHERE resp_id = ". $data["resp_id"]. "
                                 AND qst_id = " . $data["qst_id"] . "
                                 AND group_id = " . $data["group_id"] . "
                                 AND qz_key = '" . $key["qz"] . "'
                                 AND iter_key = '" . $key["iter"] ."'");
-                    } catch (PDOException $e) {
-                        log_add("resp->save_answer, update: " . $e->getMessage());
+                        } catch (PDOException $e) {
+                            log_add("resp->save_answer, update: " . $e->getMessage());
+                        }
                     }
-                }
-                        //
+                    //
 
-                if ($q)
-                    $ans = "done";
-                else
-                {
-                    log_add("resp->save_answer: error on saving a resp answer!");
-                    $ans = "fail";
+                    if ($q)
+                        $ans = "done";
+                    else
+                    {
+                        log_add("resp->save_answer: error on saving a resp answer!");
+                        $ans = "fail";
+                    }
+                    break;
                 }
-                break;
-            }
 
             case "graph":
-            {
-                switch ($info[0])
                 {
-                    case "trajectory":
+                    switch ($info[0])
+                    {
+                        case "trajectory":
 
-                        $data = json_decode($info[1], true);
-                        $y = $data["axis_y"];
-                        $x = $data["axis_x"];
-                        // Build a dataset
-                        $MyData = new pData();
-                        $path_to_fonts = "../pChart/fonts/";
-                        foreach ($data["lines"] as $key => &$line)
-                        {
-                            // Convert zero-data to pChart format
-                            foreach ($line["points"] as $point_key => &$point)
-                                if ($point === 0)
-                                    $point = 0.3;
+                            $data = json_decode($info[1], true);
+                            $y = $data["axis_y"];
+                            $x = $data["axis_x"];
+                            // Build a dataset
+                            $MyData = new pData();
+                            $path_to_fonts = "../pChart/fonts/";
+                            foreach ($data["lines"] as $key => &$line)
+                            {
+                                // Convert zero-data to pChart format
+                                foreach ($line["points"] as $point_key => &$point)
+                                    if ($point === 0)
+                                        $point = 0.3;
 
-                            $MyData->addPoints($line["points"],$line["name"]);
-
-
-                            if ($key === 0)
-                                $MyData->setSerieWeight($line["name"], 4);
-                            else
-                                $MyData->setSerieWeight($line["name"], 1.5);
-                        }
-                        /*
-                        $MyData->addPoints(array(-4,VOID,VOID,12,8,3),"Probe 1");
-                        $MyData->addPoints(array(3,12,15,8,5,-5),"Probe 2");
-                        $MyData->addPoints(array(2,7,5,18,19,22),"Probe 3");
-                        */
-                        //$MyData->setSerieTicks("Probe 2",4);
-                        //$MyData->setSerieWeight("Probe 3",2);
-                        $MyData->setPalette($x["name"], array("R"=>0, "G"=>0, "B"=>0, "Alpha"=>100));
-
-                        /*
-                        $MyData->addPoints(array(0.5, 2.5),"ghost");
-                        $MyData->setSerieWeight("ghost", 0.1);
-                        $MyData->setPalette("ghost", array("R"=>255, "G"=>255, "B"=>255, "Alpha"=>0));
-                        */
-
-                        $MyData->setAxisName(0,$y["name"]);
-                        //$MyData->setAxisName(0,"Temperatures");
-
-                        $name = $x["name"];
-                        $MyData->addPoints($x["grades"],$x["name"]);
-                        $MyData->setSerieDescription($x["name"],$name);
-                        $MyData->setAbscissa($name);
-
-                        $graph_L = 10;
-
-                        // Create the 1st chart
-                        $myPicture = new pImage(900,520,$MyData);
-                        $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>12,"FontWeight"=>300));
-                        //$myPicture->drawGradientArea(0,0,700,500,DIRECTION_VERTICAL,array("StartR"=>255,"StartG"=>255,"StartB"=>255,"EndR"=>189,"EndG"=>198,"EndB"=>222,"Alpha"=>100));
+                                $MyData->addPoints($line["points"],$line["name"]);
 
 
-                        $myPicture->setGraphArea($graph_L,10,640,440);
+                                if ($key === 0)
+                                    $MyData->setSerieWeight($line["name"], 4);
+                                else
+                                    $MyData->setSerieWeight($line["name"], 1.5);
+                            }
+                            /*
+                            $MyData->addPoints(array(-4,VOID,VOID,12,8,3),"Probe 1");
+                            $MyData->addPoints(array(3,12,15,8,5,-5),"Probe 2");
+                            $MyData->addPoints(array(2,7,5,18,19,22),"Probe 3");
+                            */
+                            //$MyData->setSerieTicks("Probe 2",4);
+                            //$MyData->setSerieWeight("Probe 3",2);
+                            $MyData->setPalette($x["name"], array("R"=>0, "G"=>0, "B"=>0, "Alpha"=>100));
 
-                        $myPicture->drawFilledRectangle($graph_L,0,640,520,array("R"=>255,"G"=>255,"B"=>255));//,"Surrounding"=>-200,"Alpha"=>10
-                        $myPicture->drawScale(array("DrawSubTicks"=>FALSE,"GridR"=>0,"GridG"=>0,"GridB"=>0,"GridAlpha"=>20, "MinDivHeight" => 100, "DrawYLines" => false, "Mode"=>SCALE_MODE_MANUAL, "ManualScale"=> array(0=>array("Min"=>0.7,"Max"=>3.2))));
-                        //$myPicture->drawScale(array("DrawSubTicks"=>TRUE));
-                        $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>12,"FontWeight"=>300));
-                        $myPicture->setShadow(TRUE,array("X"=>1,"Y"=>1,"R"=>0,"G"=>0,"B"=>0,"Alpha"=>10));
+                            /*
+                            $MyData->addPoints(array(0.5, 2.5),"ghost");
+                            $MyData->setSerieWeight("ghost", 0.1);
+                            $MyData->setPalette("ghost", array("R"=>255, "G"=>255, "B"=>255, "Alpha"=>0));
+                            */
 
-                        $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>12));
-                        $myPicture->drawText(190,490,$name,array("R"=>0,"G"=>0,"B"=>0));
+                            $MyData->setAxisName(0,$y["name"]);
+                            //$MyData->setAxisName(0,"Temperatures");
 
-                        //$myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>10));
-                        $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>10,"R"=>0,"G"=>0,"B"=>0)); // $path_to_fonts."
+                            $name = $x["name"];
+                            $MyData->addPoints($x["grades"],$x["name"]);
+                            $MyData->setSerieDescription($x["name"],$name);
+                            $MyData->setAbscissa($name);
 
-                        //$MyData->setAxisDisplay(0,AXIS_FORMAT_PRECISION,"1");
-                        //$MyData->setAxisDisplay(0,AXIS_FORMAT_METRIC,0);
-                        // 14.8
+                            $graph_L = 10;
 
-                        $myPicture->drawFilledRectangle($graph_L,10,640,135,array("R"=>200,"G"=>255,"B"=>200,"Alpha"=>20));//,"Surrounding"=>-200
-                        $myPicture->drawFilledRectangle($graph_L,136,640,315,array("R"=>255,"G"=>255,"B"=>200,"Alpha"=>20));//,"Surrounding"=>-200
-                        $myPicture->drawFilledRectangle($graph_L,316,640,440,array("R"=>255,"G"=>200,"B"=>200,"Alpha"=>20));//,"Surrounding"=>-200
-                        $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>20,"R"=>120,"G"=>120,"B"=>120));
-                        $myPicture->drawText($graph_L + 10,40,"высокий уровень",array("R"=>0,"G"=>0,"B"=>0,"Alpha"=>25));
-                        $myPicture->drawText($graph_L + 10,166,"средний уровень",array("R"=>0,"G"=>0,"B"=>0,"Alpha"=>25));
-                        $myPicture->drawText($graph_L + 10,346,"низкий уровень",array("R"=>0,"G"=>0,"B"=>0,"Alpha"=>25));
-
-
-                        $myPicture->drawLineChart(array("DisplayValues"=>FALSE,"DisplayColor"=>DISPLAY_MANUAL));
-                        $myPicture->setShadow(FALSE);
-
-                        // Write the legend
-                        //$MyData->removeSerie("ghost");
-                        $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>12,"R"=>0,"G"=>0,"B"=>0));
-                        $myPicture->drawLegend(650,30,array(
-                            "Style"=>LEGEND_NOBORDER,
-                            "Mode"=>LEGEND_VERTICAL,
-                            "R"=>255,
-                            "G"=>255,
-                            "B"=>255));
-                        $myPicture->render("img/traj_graph.png");
-                        break;
-
-                    case "test_results":
-
-                        $data = json_decode($info[1], true);
-                        $y = $data["axis_y"];
-                        $x = $data["axis_x"];
-                        // Build a dataset
-                        $MyData = new pData();
-                        $max_resp_qnt = 0;
-                        $path_to_fonts = "../pChart/fonts/";
-                        foreach ($data["lines"] as $key => &$line)
-                        {
-                            // Convert zero-data to pChart format
-                            foreach ($line["points"] as $point)
-                                if ($max_resp_qnt < $point)
-                                    $max_resp_qnt = $point;
-
-                            $MyData->addPoints($line["points"],$line["name"]);
-                            $MyData->setSerieWeight($line["name"], 2);
-                        }
-                        /*
-                        $MyData->addPoints(array(-4,VOID,VOID,12,8,3),"Probe 1");
-                        $MyData->addPoints(array(3,12,15,8,5,-5),"Probe 2");
-                        $MyData->addPoints(array(2,7,5,18,19,22),"Probe 3");
-                        */
-                        //$MyData->setSerieTicks("Probe 2",4);
-                        //$MyData->setSerieWeight("Probe 3",2);
-                        $MyData->setPalette($x["name"], array("R"=>0, "G"=>0, "B"=>0, "Alpha"=>100));
-
-                        /*
-                        $MyData->addPoints(array(0.5, 2.5),"ghost");
-                        $MyData->setSerieWeight("ghost", 0.1);
-                        $MyData->setPalette("ghost", array("R"=>255, "G"=>255, "B"=>255, "Alpha"=>0));
-                        */
-
-                        $MyData->setAxisName(0,$y["name"]);
-                        //$MyData->setAxisName(0,"Temperatures");
-
-                        $name = $x["name"];
-                        $MyData->addPoints($x["grades"],$x["name"]);
-                        $MyData->setSerieDescription($x["name"],$name);
-                        $MyData->setAbscissa($name);
-
-                        //$MyData->setAxisDisplay(0,AXIS_FORMAT_PRECISION,"1");
-                        $MyData->setAxisDisplay(0,AXIS_FORMAT_METRIC,0);
-
-                        $graph_L = 60;
-
-                        // Create the 1st chart
-                        $myPicture = new pImage(900,520,$MyData);
-                        $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>12,"FontWeight"=>300));
-                        //$myPicture->drawGradientArea(0,0,700,500,DIRECTION_VERTICAL,array("StartR"=>255,"StartG"=>255,"StartB"=>255,"EndR"=>189,"EndG"=>198,"EndB"=>222,"Alpha"=>100));
+                            // Create the 1st chart
+                            $myPicture = new pImage(900,520,$MyData);
+                            $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>12,"FontWeight"=>300));
+                            //$myPicture->drawGradientArea(0,0,700,500,DIRECTION_VERTICAL,array("StartR"=>255,"StartG"=>255,"StartB"=>255,"EndR"=>189,"EndG"=>198,"EndB"=>222,"Alpha"=>100));
 
 
-                        $myPicture->setGraphArea($graph_L,20,640,450);
+                            $myPicture->setGraphArea($graph_L,10,640,440);
 
-                        $myPicture->drawFilledRectangle($graph_L,0,640,520,array("R"=>255,"G"=>255,"B"=>255));//,"Surrounding"=>-200,"Alpha"=>10
-                        $myPicture->drawScale(array(
-                            "DrawSubTicks"=>TRUE,
-                            "GridR"=>0,
-                            "GridG"=>0,
-                            "GridB"=>0,
-                            "GridAlpha"=>20,
-                            "MinDivHeight" => 150,
-                            "Mode"=>SCALE_MODE_MANUAL,
-                            "ManualScale"=> array(0=>array("Min"=>0,"Max"=>$max_resp_qnt), 1=>array("Min"=>0,"Max"=>5)))); // "DrawYLines" => true,
-                        //$myPicture->drawScale(array("DrawSubTicks"=>TRUE));
-                        $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>12,"FontWeight"=>300));
-                        $myPicture->setShadow(TRUE,array("X"=>1,"Y"=>1,"R"=>0,"G"=>0,"B"=>0,"Alpha"=>10));
+                            $myPicture->drawFilledRectangle($graph_L,0,640,520,array("R"=>255,"G"=>255,"B"=>255));//,"Surrounding"=>-200,"Alpha"=>10
+                            $myPicture->drawScale(array("DrawSubTicks"=>FALSE,"GridR"=>0,"GridG"=>0,"GridB"=>0,"GridAlpha"=>20, "MinDivHeight" => 100, "DrawYLines" => false, "Mode"=>SCALE_MODE_MANUAL, "ManualScale"=> array(0=>array("Min"=>0.7,"Max"=>3.2))));
+                            //$myPicture->drawScale(array("DrawSubTicks"=>TRUE));
+                            $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>12,"FontWeight"=>300));
+                            $myPicture->setShadow(TRUE,array("X"=>1,"Y"=>1,"R"=>0,"G"=>0,"B"=>0,"Alpha"=>10));
 
-                        $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>12));
-                        $myPicture->drawText(190,490,$name,array("R"=>0,"G"=>0,"B"=>0));
+                            $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>12));
+                            $myPicture->drawText(190,490,$name,array("R"=>0,"G"=>0,"B"=>0));
 
-                        //$myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>10));
-                        $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>10,"R"=>0,"G"=>0,"B"=>0)); // $path_to_fonts."
+                            //$myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>10));
+                            $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>10,"R"=>0,"G"=>0,"B"=>0)); // $path_to_fonts."
 
-                        //$myPicture->drawFilledRectangle($graph_L,20,640,163,array("R"=>255,"G"=>255,"B"=>255,"Alpha"=>100));//,"Surrounding"=>-200
-                        //$myPicture->drawFilledRectangle($graph_L,20,640,163,array("R"=>200,"G"=>255,"B"=>200,"Alpha"=>20));//,"Surrounding"=>-200
-                        //$myPicture->drawFilledRectangle($graph_L,163,640,306,array("R"=>255,"G"=>255,"B"=>200,"Alpha"=>20));//,"Surrounding"=>-200
-                        //$myPicture->drawFilledRectangle($graph_L,306,640,450,array("R"=>255,"G"=>200,"B"=>200,"Alpha"=>20));//,"Surrounding"=>-200
-                        $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>20,"R"=>120,"G"=>120,"B"=>120));
-                        //$myPicture->drawText($graph_L + 10,335,"низкий уровень",array("R"=>0,"G"=>0,"B"=>0,"Alpha"=>25));
-                        //$myPicture->drawText($graph_L + 10,190,"средний уровень",array("R"=>0,"G"=>0,"B"=>0,"Alpha"=>25));
-                        //$myPicture->drawText($graph_L + 10,50,"высокий уровень",array("R"=>0,"G"=>0,"B"=>0,"Alpha"=>25));
-                        $myPicture->drawLineChart(array(
-                            "DisplayValues"=>FALSE,
-                            "DisplayColor"=>DISPLAY_MANUAL,
-                            "DisplayOffset" => "UP",
-                            "DisplayR" => 0,
-                            "DisplayG" => 0,
-                            "DisplayB" => 0));
-                        $myPicture->setShadow(FALSE);
+                            //$MyData->setAxisDisplay(0,AXIS_FORMAT_PRECISION,"1");
+                            //$MyData->setAxisDisplay(0,AXIS_FORMAT_METRIC,0);
+                            // 14.8
 
-                        // Write the legend
-                        //$MyData->removeSerie("ghost");
-                        $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>12,"R"=>0,"G"=>0,"B"=>0));
-                        $myPicture->drawLegend(650,20,array(
-                            "Style"=>LEGEND_NOBORDER,
-                            "Mode"=>LEGEND_VERTICAL,
-                            "R"=>255,
-                            "G"=>205,
-                            "B"=>205));
-                        $myPicture->render("img/traj_graph.png");
-                        break;
+                            $myPicture->drawFilledRectangle($graph_L,10,640,135,array("R"=>200,"G"=>255,"B"=>200,"Alpha"=>20));//,"Surrounding"=>-200
+                            $myPicture->drawFilledRectangle($graph_L,136,640,315,array("R"=>255,"G"=>255,"B"=>200,"Alpha"=>20));//,"Surrounding"=>-200
+                            $myPicture->drawFilledRectangle($graph_L,316,640,440,array("R"=>255,"G"=>200,"B"=>200,"Alpha"=>20));//,"Surrounding"=>-200
+                            $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>20,"R"=>120,"G"=>120,"B"=>120));
+                            $myPicture->drawText($graph_L + 10,40,"высокий уровень",array("R"=>0,"G"=>0,"B"=>0,"Alpha"=>25));
+                            $myPicture->drawText($graph_L + 10,166,"средний уровень",array("R"=>0,"G"=>0,"B"=>0,"Alpha"=>25));
+                            $myPicture->drawText($graph_L + 10,346,"низкий уровень",array("R"=>0,"G"=>0,"B"=>0,"Alpha"=>25));
+
+
+                            $myPicture->drawLineChart(array("DisplayValues"=>FALSE,"DisplayColor"=>DISPLAY_MANUAL));
+                            $myPicture->setShadow(FALSE);
+
+                            // Write the legend
+                            //$MyData->removeSerie("ghost");
+                            $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>12,"R"=>0,"G"=>0,"B"=>0));
+                            $myPicture->drawLegend(650,30,array(
+                                "Style"=>LEGEND_NOBORDER,
+                                "Mode"=>LEGEND_VERTICAL,
+                                "R"=>255,
+                                "G"=>255,
+                                "B"=>255));
+                            $myPicture->render("img/traj_graph.png");
+                            break;
+
+                        case "test_results":
+
+                            $data = json_decode($info[1], true);
+                            $y = $data["axis_y"];
+                            $x = $data["axis_x"];
+                            // Build a dataset
+                            $MyData = new pData();
+                            $max_resp_qnt = 0;
+                            $path_to_fonts = "../pChart/fonts/";
+                            foreach ($data["lines"] as $key => &$line)
+                            {
+                                // Convert zero-data to pChart format
+                                foreach ($line["points"] as $point)
+                                    if ($max_resp_qnt < $point)
+                                        $max_resp_qnt = $point;
+
+                                $MyData->addPoints($line["points"],$line["name"]);
+                                $MyData->setSerieWeight($line["name"], 2);
+                            }
+                            /*
+                            $MyData->addPoints(array(-4,VOID,VOID,12,8,3),"Probe 1");
+                            $MyData->addPoints(array(3,12,15,8,5,-5),"Probe 2");
+                            $MyData->addPoints(array(2,7,5,18,19,22),"Probe 3");
+                            */
+                            //$MyData->setSerieTicks("Probe 2",4);
+                            //$MyData->setSerieWeight("Probe 3",2);
+                            $MyData->setPalette($x["name"], array("R"=>0, "G"=>0, "B"=>0, "Alpha"=>100));
+
+                            /*
+                            $MyData->addPoints(array(0.5, 2.5),"ghost");
+                            $MyData->setSerieWeight("ghost", 0.1);
+                            $MyData->setPalette("ghost", array("R"=>255, "G"=>255, "B"=>255, "Alpha"=>0));
+                            */
+
+                            $MyData->setAxisName(0,$y["name"]);
+                            //$MyData->setAxisName(0,"Temperatures");
+
+                            $name = $x["name"];
+                            $MyData->addPoints($x["grades"],$x["name"]);
+                            $MyData->setSerieDescription($x["name"],$name);
+                            $MyData->setAbscissa($name);
+
+                            //$MyData->setAxisDisplay(0,AXIS_FORMAT_PRECISION,"1");
+                            $MyData->setAxisDisplay(0,AXIS_FORMAT_METRIC,0);
+
+                            $graph_L = 60;
+
+                            // Create the 1st chart
+                            $myPicture = new pImage(900,520,$MyData);
+                            $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>12,"FontWeight"=>300));
+                            //$myPicture->drawGradientArea(0,0,700,500,DIRECTION_VERTICAL,array("StartR"=>255,"StartG"=>255,"StartB"=>255,"EndR"=>189,"EndG"=>198,"EndB"=>222,"Alpha"=>100));
+
+
+                            $myPicture->setGraphArea($graph_L,20,640,450);
+
+                            $myPicture->drawFilledRectangle($graph_L,0,640,520,array("R"=>255,"G"=>255,"B"=>255));//,"Surrounding"=>-200,"Alpha"=>10
+                            $myPicture->drawScale(array(
+                                "DrawSubTicks"=>TRUE,
+                                "GridR"=>0,
+                                "GridG"=>0,
+                                "GridB"=>0,
+                                "GridAlpha"=>20,
+                                "MinDivHeight" => 150,
+                                "Mode"=>SCALE_MODE_MANUAL,
+                                "ManualScale"=> array(0=>array("Min"=>0,"Max"=>$max_resp_qnt), 1=>array("Min"=>0,"Max"=>5)))); // "DrawYLines" => true,
+                            //$myPicture->drawScale(array("DrawSubTicks"=>TRUE));
+                            $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>12,"FontWeight"=>300));
+                            $myPicture->setShadow(TRUE,array("X"=>1,"Y"=>1,"R"=>0,"G"=>0,"B"=>0,"Alpha"=>10));
+
+                            $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>12));
+                            $myPicture->drawText(190,490,$name,array("R"=>0,"G"=>0,"B"=>0));
+
+                            //$myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>10));
+                            $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>10,"R"=>0,"G"=>0,"B"=>0)); // $path_to_fonts."
+
+                            //$myPicture->drawFilledRectangle($graph_L,20,640,163,array("R"=>255,"G"=>255,"B"=>255,"Alpha"=>100));//,"Surrounding"=>-200
+                            //$myPicture->drawFilledRectangle($graph_L,20,640,163,array("R"=>200,"G"=>255,"B"=>200,"Alpha"=>20));//,"Surrounding"=>-200
+                            //$myPicture->drawFilledRectangle($graph_L,163,640,306,array("R"=>255,"G"=>255,"B"=>200,"Alpha"=>20));//,"Surrounding"=>-200
+                            //$myPicture->drawFilledRectangle($graph_L,306,640,450,array("R"=>255,"G"=>200,"B"=>200,"Alpha"=>20));//,"Surrounding"=>-200
+                            $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>20,"R"=>120,"G"=>120,"B"=>120));
+                            //$myPicture->drawText($graph_L + 10,335,"низкий уровень",array("R"=>0,"G"=>0,"B"=>0,"Alpha"=>25));
+                            //$myPicture->drawText($graph_L + 10,190,"средний уровень",array("R"=>0,"G"=>0,"B"=>0,"Alpha"=>25));
+                            //$myPicture->drawText($graph_L + 10,50,"высокий уровень",array("R"=>0,"G"=>0,"B"=>0,"Alpha"=>25));
+                            $myPicture->drawLineChart(array(
+                                "DisplayValues"=>FALSE,
+                                "DisplayColor"=>DISPLAY_MANUAL,
+                                "DisplayOffset" => "UP",
+                                "DisplayR" => 0,
+                                "DisplayG" => 0,
+                                "DisplayB" => 0));
+                            $myPicture->setShadow(FALSE);
+
+                            // Write the legend
+                            //$MyData->removeSerie("ghost");
+                            $myPicture->setFontProperties(array("FontName"=>$path_to_fonts."verdana.ttf","FontSize"=>12,"R"=>0,"G"=>0,"B"=>0));
+                            $myPicture->drawLegend(650,20,array(
+                                "Style"=>LEGEND_NOBORDER,
+                                "Mode"=>LEGEND_VERTICAL,
+                                "R"=>255,
+                                "G"=>205,
+                                "B"=>205));
+                            $myPicture->render("img/traj_graph.png");
+                            break;
+                    }
+
+                    $ans = json_encode($data);
                 }
-
-                $ans = json_encode($data);
-            }
-            break;
+                break;
 
             case "to_excell":
-            {
-                //$data = json_decode($info, true);
-                file_put_contents("table_export_". $_SESSION["pers"]["id"] .".txt", $info);
-                //$_SESSION["extycs"] = $data;
-                //header("Location: Answers_exporter.php");
-                $ans = "done";
-            }
-            break;
+                {
+                    //$data = json_decode($info, true);
+                    file_put_contents("table_export_". $_SESSION["pers"]["id"] .".txt", $info);
+                    //$_SESSION["extycs"] = $data;
+                    //header("Location: Answers_exporter.php");
+                    $ans = "done";
+                }
+                break;
 
             case "base64_image_save":
                 {
@@ -2531,7 +2567,7 @@ class DBase{
                 $bro = digitize($bro, array("cd","ud","madeby","id"));
                 array_push($_SESSION["comps"], $bro);
             }
-                        // Определить статус [5] слот
+            // Определить статус [5] слот
             foreach ($_SESSION["comps"] as &$comp){
                 $status = 0;
                 foreach ($_SESSION['qsts'] as $qst)
@@ -3065,7 +3101,7 @@ class DBase{
                                 $bro[$key] = json_decode($bro[$key]);
 
                                 //if ($bro["qkey"] === "Yo8FU" && $key === "resps")
-                                    //file_put_contents("no_resps.txt", "\n Re-encoded " . json_encode($bro["resps"], JSON_UNESCAPED_UNICODE), FILE_APPEND);
+                                //file_put_contents("no_resps.txt", "\n Re-encoded " . json_encode($bro["resps"], JSON_UNESCAPED_UNICODE), FILE_APPEND);
                                 // Change the formating back to its original state
                                 if ($key === "settings")
                                 {
@@ -3124,10 +3160,19 @@ class DBase{
             $resp_keys = $this->doKey(5, "resp", $resps_qnt);
             $key_ord = -1;
             $mailer_list = array();
+            $mailer_focus_name_list = array();
 
             // Set all needed attributes for each resp in every focus group + get info on multi-links to same resp
             foreach ($qz["resps"] as $gr_ord => &$group)
             {
+                $focus_name = "";
+                foreach ($_SESSION["resps"] as $db_resp)
+                    if ($db_resp['id'] === $group[0]["id"])
+                    {
+                        $focus_name = $db_resp["fio"];
+                        break;
+                    }
+
                 foreach ($group as $resp_ord => &$resp)
                 {
                     $key_ord++;
@@ -3145,10 +3190,15 @@ class DBase{
                     if (!IS_LOCAL)
                     {
                         if (!isset($mailer_list[$resp["id"]]))
+                        {
                             $mailer_list[$resp["id"]] = array();
+                            $mailer_focus_name_list[$resp["id"]] = array();
+                        }
 
                         $m_slot = &$mailer_list[$resp["id"]];
+
                         array_push($m_slot, $resp["ukey"]); // in case same resp present if several focus groups of same quiz, he will get N links in one letter
+                        array_push($mailer_focus_name_list[$resp["id"]], $focus_name);
                         unset($m_slot);
                     }
                     unset($resp);
@@ -3161,52 +3211,53 @@ class DBase{
             {
                 file_put_contents("mailer_list_check", json_encode($mailer_list));
                 (!isset($_SESSION["resps"]) ? $this->resp("list", null, false) : false);
-                // Send invites to resps (letters are grouped by unique respondent)
+                $sent_letters_bank = array();
+                // Send invites to resps (letters are grouped by unique respondent id's)
                 foreach ($qz["resps"] as $gr_ord => &$group)
                 {
-                    // Get focus-person fio
-                    $focus_name = "";
-                    foreach ($_SESSION["resps"] as $db_resp)
-                        if ($db_resp['id'] === $group[0]["id"])
-                        {
-                            $focus_name = $db_resp["fio"]; // get a focus-person fio in each group
-                            break;
-                        }
                     foreach ($group as $resp_ord => &$resp)
                     {
                         $rid = $resp["id"];
                         $resp_mail = "";
+                        $resp_fio = "";
 
                         foreach ($_SESSION["resps"] as $db_resp)
-                            if ($db_resp['id'] === $rid)
+                            if ($db_resp['id'] === $resp["id"])
                             {
-                                $resp_mail = $db_resp["mail"];
+                                $resp_mail = mb_strtolower($db_resp["mail"]);
+                                $resp_fio = $db_resp["fio"];
                                 break;
                             }
 
                         // Send mail
-                        if ($resp_mail)
+                        if ($resp_mail && !in_array($resp_mail, $sent_letters_bank))
                         {
+                            array_push($sent_letters_bank, $resp_mail);
+
                             $message = $d["settings"]["letter"];
                             $btn_name = explode("##", $message);
                             $btn_name = $btn_name[1];
-                            if (!$btn_name)
-                                $btn_name = "Перейти";
+
                             $link = "";
                             file_put_contents("mailer_list_check", "\n resp id " . $rid . " is_empty=" . empty($mailer_list[$rid]) ." |", FILE_APPEND);
                             // Add all needed links to one letter
                             if (!empty($mailer_list[$rid]))
                             {
-                                foreach ($mailer_list[$rid] as $ukey)
+                                foreach ($mailer_list[$rid] as $list_ord => $ukey) // pack all link for this resp into one letter, but multi-btns
                                 {
+                                    $focus_name = $mailer_focus_name_list[$resp["id"]][$list_ord];
+                                    if (!$btn_name)
+                                        $btn_name = $focus_name;
+
                                     $path = DURL . "client.php?q=".$qz["qkey"]."&r=".$ukey;
                                     $link_string = get_link_button_html($btn_name, $path); //"<a href='". $path ."'><b>ПЕРЕЙТИ</b></a>";
-                                    $link .= "\n опрос <b>$focus_name</b> " . $link_string;
+                                    $link .= "\n опрос <b>$focus_name</b> $link_string";
                                 }
 
                                 file_put_contents("mailer_list_check", "\n link " . $link, FILE_APPEND);
                                 $message = str_replace("##$btn_name##", $link, $message);
                                 $message = str_replace("%ФИО%", $focus_name, $message);
+                                $message = str_replace("%NAME%", $focus_name, $message);
                                 $message = str_replace("%LINK%", $link, $message);
                                 $message = str_replace("\n", "<br>", $message);
                                 $message = str_replace("%ORG%", $_SESSION["pers"]["comp"], $message);
@@ -3739,7 +3790,7 @@ class DBase{
         }
     }
 //>>>>--------->>>>--------->>>>---------->>>>---------->>>>----------->>>>------------>>>>------------>>>>------->>>>--
-    function send_query ($query)   
+    function send_query ($query)
     {
         $ans = null;
         try

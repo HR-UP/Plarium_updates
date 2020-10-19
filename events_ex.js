@@ -1490,10 +1490,10 @@ function message_ex($action,$type,$about,$data,$tags){
                                         else
                                         {
                                             form = {};
-                                            let qb_src = $ad.qbooks[$data.qb_ord];
+                                            let qb_src = duplicate($ad.qbooks[$data.qb_ord]);
                                             // Transfer all keys
                                             Object.keys(qb_src).map(function (key) {
-                                                form[key] = qb_src[key];
+                                                form[key] = duplicate(qb_src[key]);
                                             });
                                             form.name = qbook_name;
                                             delete form.id;
