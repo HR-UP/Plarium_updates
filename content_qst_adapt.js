@@ -369,16 +369,15 @@ function qb_adapt(action) {
             let comp_id_list = get_comp_id_list_from_qst_list(qb.list);
             let log_pushed = false;
 
-            for (let k=0; k<comp_id_list.length; k++)
-
             comp_id_list.forEach(function (v_comp_id) {
+                /*
                 if (null === struct.c_list[v_comp_id])
                 {
                     let cmp = get_comp_ord_from_comp_id(v_comp_id);
-
                     struct.c_list[v_comp_id] = qb_adapt_bld_comp_structure();
                     console.log("ошибка: компетенциz ["+v_comp_id+"] " + cmp.name + " не имелf слота в c_list, восполнено");
                 }
+                */
 
                 s += qb_adapt_line_comp(struct.c_list[v_comp_id], v_comp_id); // add COMP line to the table
 
@@ -387,6 +386,7 @@ function qb_adapt(action) {
                     let q_ord = get_qst_ord_from_qst_id(v_qid);
                     if (null !== q_ord && $ad.qsts[q_ord].comp_id === v_comp_id) // qst belongs to this competention id
                     {
+                        /*
                         if (null === struct.q_list[v_qid])
                         {
                             let qtx = $ad.qsts[q_ord].tx;
@@ -442,6 +442,7 @@ function qb_adapt(action) {
 
                             struct.q_list[v_qid] = qb_adapt_bld_qst_structure(v_qid);
                         }
+                        */
                         s += qb_adapt_line_qst(struct.q_list[v_qid], v_qid, v_comp_id); // add QST line to the table
                     }
                 });
@@ -608,7 +609,7 @@ function qb_adapt_check_structure(qb_ord) {
             //console.log("comp_id " + comp_id);
 
             // Add slots for new/absent COMP
-            if (!struct.c_list.hasOwnProperty(comp_id))
+            if (!struct.c_list.hasOwnProperty(comp_id) || !struct.c_list[comp_id])
             {
                 struct.c_list[comp_id] = qb_adapt_bld_comp_structure();
                 struct.is_saved = 0; // new element - mark qb adaptive structure as unsaved
@@ -616,7 +617,7 @@ function qb_adapt_check_structure(qb_ord) {
             }
 
             // Add slots for new/absent QST
-            if (!struct.q_list.hasOwnProperty(qid))
+            if (!struct.q_list.hasOwnProperty(qid) || !struct.q_list[qid])
             {
                 struct.q_list[qid] = qb_adapt_bld_qst_structure(qid);
                 struct.is_saved = 0; // new element - mark qb adaptive structure as unsaved
