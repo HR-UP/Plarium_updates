@@ -372,6 +372,14 @@ function qb_adapt(action) {
             for (let k=0; k<comp_id_list.length; k++)
 
             comp_id_list.forEach(function (v_comp_id) {
+                if (null === struct.c_list[v_comp_id])
+                {
+                    let cmp = get_comp_ord_from_comp_id(v_comp_id);
+
+                    struct.c_list[v_comp_id] = qb_adapt_bld_comp_structure();
+                    console.log("ошибка: компетенциz ["+v_comp_id+"] " + cmp.name + " не имелf слота в c_list, восполнено");
+                }
+
                 s += qb_adapt_line_comp(struct.c_list[v_comp_id], v_comp_id); // add COMP line to the table
 
                 // Find every qst related to this competention
@@ -381,9 +389,9 @@ function qb_adapt(action) {
                     {
                         if (null === struct.q_list[v_qid])
                         {
-                            let qtx = $ad.qsts.tx;
+                            let qtx = $ad.qsts[q_ord].tx;
 
-                            console.log("ошибка: вопрос ["+v_qid+"] ->" + qtx + " // не имел слота в q_list");
+                            console.log("ошибка: вопрос ["+v_qid+"] ->" + qtx + " // не имел слота в q_list, восполнено");
                             if (!log_pushed)
                             {
                                 log_pushed = true;
@@ -407,19 +415,26 @@ function qb_adapt(action) {
                                 console.log("список опросника: " + list);
                                 list = "";
                                 Object.keys(struct.q_list).map(function (key) {
-                                    if (!list)
-                                        list += key;
-                                    else
-                                        list += "," + key;
-
-                                    if (qb.list.indexOf(key*1) === -1)
+                                    if (null !== struct.q_list[key])
                                     {
-                                        if (!exs_slots)
-                                            exs_slots += key;
+                                        if (!list)
+                                            list += key;
                                         else
-                                            exs_slots += "," + key;
+                                            list += "," + key;
+
+                                        if (qb.list.indexOf(key*1) === -1)
+                                        {
+                                            if (!exs_slots)
+                                                exs_slots += key;
+                                            else
+                                                exs_slots += "," + key;
+                                        }
                                     }
+
                                 });
+
+                                if (!exs_qid) exs_qid = "нет";
+                                if (!exs_slots) exs_slots = "нет";
                                 console.log("список слотов: " + list);
                                 console.log("лишние слоты: " + exs_slots);
                                 console.log("лишние вопросы: " + exs_qid);
@@ -512,11 +527,7 @@ function qb_adapt_update_structure(qb_ord) {
                 // Add slots for new/absent COMP
                 if (!struct.c_list.hasOwnProperty(comp_id))
                 {
-                    struct.c_list[comp_id] = {
-                        wg: 1,
-                        targ_total: null,
-                        targ_avg: null
-                    };
+                    struct.c_list[comp_id] = qb_adapt_bld_comp_structure();
                     struct.is_saved = 0; // new element - mark qb adaptive structure as unsaved
                     //console.log("new comp_id slot " + comp_id);
                 }
@@ -552,6 +563,14 @@ function qb_adapt_bld_qst_structure(qid) {
         };
     });
     return slot;
+}
+//----------------------------------------------------------------------------------------------------------------------
+function qb_adapt_bld_comp_structure() {
+    return {
+        wg: 1,
+        targ_total: null,
+        targ_avg: null
+    };
 }
 //----------------------------------------------------------------------------------------------------------------------
 function qb_adapt_check_structure(qb_ord) {
@@ -591,11 +610,7 @@ function qb_adapt_check_structure(qb_ord) {
             // Add slots for new/absent COMP
             if (!struct.c_list.hasOwnProperty(comp_id))
             {
-                struct.c_list[comp_id] = {
-                    wg: 1,
-                    targ_total: null,
-                    targ_avg: null
-                };
+                struct.c_list[comp_id] = qb_adapt_bld_comp_structure();
                 struct.is_saved = 0; // new element - mark qb adaptive structure as unsaved
                 //console.log("new comp_id slot " + comp_id);
             }
@@ -603,21 +618,7 @@ function qb_adapt_check_structure(qb_ord) {
             // Add slots for new/absent QST
             if (!struct.q_list.hasOwnProperty(qid))
             {
-                struct.q_list[qid] = {
-                    wg: 1,
-                    targ: null,
-                    cats: []
-                };
-                //console.log("new qst slot " + qid);
-
-                // Fill cats obj with a default template for roles/categories
-                let cat_id_list = [0,4,3,5]; // self, boss, colleague, employee
-                cat_id_list.forEach(function (cat_id) {
-                    struct.q_list[qid].cats[cat_id] = {
-                        tx: "",
-                        is_on: 1
-                    };
-                });
+                struct.q_list[qid] = qb_adapt_bld_qst_structure(qid);
                 struct.is_saved = 0; // new element - mark qb adaptive structure as unsaved
             }
         });
