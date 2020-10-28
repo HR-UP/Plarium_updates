@@ -21,11 +21,12 @@ function report2_comps_summ(qz_ord, batch_ord, targ_qz_id) {
     };
 
     let qb_next_match = true, qb_valid = true, qb_next_valid = true;
-
+/*
     Object.keys(struct.c_list).map(function(k) { // COMPETENTION
         if (null !== struct.c_list[k] && (!struct.c_list[k].hasOwnProperty("targ_avg") || null === struct.c_list[k].targ_avg))
             qb_valid = false;
     });
+    */
     if (targ_qz_id)
     {
         qb_next = get_qb_ord_from_qb_id(targ_qz_id); // this is ord
@@ -413,10 +414,12 @@ function report2_comps_summ_resp(qz_ord, batch_ord, targ_qz_id) {
     };
 
     let qb_next_match = true, qb_valid = true, qb_next_valid = true;
+    /*
     Object.keys(struct.c_list).map(function(k) { // COMPETENTION
-        if (!struct.c_list[k].hasOwnProperty("targ_avg") || null === struct.c_list[k].targ_avg)
+        if (null !== struct.c_list[k] && (!struct.c_list[k].hasOwnProperty("targ_avg") || null === struct.c_list[k].targ_avg))
             qb_valid = false;
     });
+    */
     if (targ_qz_id)
     {
         qb_next = get_qb_ord_from_qb_id(targ_qz_id); // this is ord
