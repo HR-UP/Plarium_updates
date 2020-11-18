@@ -10,7 +10,7 @@ function qz_is_complete(qz_ord)
     let qz = $ad.qzs[qz_ord];
 
 
-    if (qz.settings.end_date > time && !qz.status)
+    if (!qz.status) // qz.settings.end_date > time &&
         for (let g=0; g<qz.resps.length; g++)
         {
             let group = qz.resps[g];
