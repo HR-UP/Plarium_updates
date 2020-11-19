@@ -909,17 +909,11 @@ function answer_record_tracker() {
 //----------------------------------------------------------------------------------------------------------------------
 function next(going_back)
 {
-    if (undefined === going_back && "comment_block_end" !== $fb_prg)
-    {
-        $qsts.cur = get_next_qst_ord();
-    }
-
-    if ("comment_block_end" === $fb_prg)
-    {
-        $fb_prg = 0; // reset it's param with first next() call, neede once for a single skip of the qsts_cur step forward
-    }
-    else
+    if ("comment_block_end" !== $fb_prg)
         $qsts.last = $qsts.cur; // only rewrite last when we jumped from qst to qst, not from comment section to qst
+
+    if (undefined === going_back && "comment_block_end" !== $fb_prg)
+        $qsts.cur = get_next_qst_ord();
 
 
     if ($qsts.last === -1) // When we start qz not from first qst, but from first unanswered, we need an id for last valid qst ord
@@ -1118,7 +1112,11 @@ function next(going_back)
                 start_feedback("comp");
             else
             if ($clidata.comm_qz_qnt)
-                start_feedback("qz");
+            {
+
+                start_feedback("qz"); // fb_prg will be set to 0 auto
+            }
+
             else
                 endscreen();
         }
@@ -1212,6 +1210,9 @@ function next(going_back)
                 });
             }
         }
+
+        if ("comment_block_end" === $fb_prg)
+            $fb_prg = 0; // reset it's param with first next() call, neede once for a single skip of the qsts_cur step forward
     }
 }
 //----------------------------------------------------------------------------------------------------------------------
