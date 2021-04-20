@@ -56,185 +56,188 @@ if (is_array($crew))
             {
                 $made_changes = false;
                 $sts = json_decode(json_encode($qz["settings"]), true);
-                $resps = json_decode(json_encode($qz["resps"]), true);
-                $notice_list = &$sts["notice_list"];
-                $reminders_period = SEC_PER_DAY * $sts["notice_period_id"]; // THIS sould be the interval of messages sent
-                //$reminders_period = 60 * 5; // #test value for each 5 min
 
-                // 1 - REPORT ON EXPIRED DATE
-                if ($notice_list[0]*1 === 1)
+                if ($sts["end_date"]*1 > $date_of_now)
                 {
-                    if ($date_of_now >= $sts["end_date"])
+                    $resps = json_decode(json_encode($qz["resps"]), true);
+                    $notice_list = &$sts["notice_list"];
+                    $reminders_period = SEC_PER_DAY * $sts["notice_period_id"]; // THIS sould be the interval of messages sent
+                    //$reminders_period = 60 * 5; // #test value for each 5 min
+
+                    // 1 - REPORT ON EXPIRED DATE
+                    if ($notice_list[0]*1 === 1)
                     {
-                        $notice_list[0] = $date_of_now; // set value to cur date to indicate we already done this
-                        $made_changes = true;
-                        $message = "Добрый день.<br>";
-                        $message .= "Дата прохождения опроса ". $qz["name"] ." в вашей учетной записи истекла.";
-                        $message .= $mess_sub;
-                        $subject = "Система 360, дата прохождения опроса вышла";
-                        if (!IS_LOCAL && $send_enabled)
-                            sendMail($subject, $message, $admin_mail);
-                        array_push($scheduler_data, array(
-                            "type" => "REPORT ON QUIZ EXPIRED DATE",
-                            "subject" => $subject,
-                            "message" => $message,
-                            "admin_mail" => $admin_mail
-                        ));
-                    }
-                }
-
-                // 2 - REPORT ON QZ COMPLETE
-                if ($notice_list[1]*1 === 1)
-                {
-                    if ($qz["status"]*1 === 1)
-                    {
-                        $notice_list[1] = $date_of_now; // set value to cur date to indicate we already done this
-                        $made_changes = true;
-                        $message = "Добрый день.<br>";
-                        $message .= "Опрос ". $qz["name"] ." пройден всеми респондентам.";
-                        $message .= $mess_sub;
-                        $subject = "Система 360, опроса завершен";
-                        if (!IS_LOCAL && $send_enabled)
-                            sendMail($subject, $message, $admin_mail);
-                        array_push($scheduler_data, array(
-                            "type" => "REPORT ON QZ COMPLETE",
-                            "subject" => $subject,
-                            "message" => $message,
-                            "admin_mail" => $admin_mail
-                        ));
-                    }
-                }
-
-                // 3 - REPORT ON QZ COMPLETION %
-                if (is_array($notice_list[2]) || $notice_list[2]*1 === 1)
-                {
-                    if (!is_array($notice_list[2]))
-                    {
-                        $notice_list[2] = array();
-                        foreach ($resps as $group)
-                            array_push($notice_list[2], 0);
-                    }
-
-                    $pct_target = $sts["notice_pct"] / 100;
-                    $pct_filled = 0;
-                    $slot = array(
-                        "settings" => $sts,
-                        "resps" => $resps
-                        //"qz_ord" => $qz_ord
-                    );
-
-                    foreach ($resps as $gr_ord => $group) // get avg pct of completion across all groups
-                        if (!$notice_list[2][$gr_ord])
+                        if ($date_of_now >= $sts["end_date"])
                         {
-                            $slot["gr_ord"] = $gr_ord;
-                            $pct_filled = 0; //resp_pct_done($slot);
-                            $resp_qnt = 0;
-                            foreach ($group as $r_ord => $resp)
-                                if (!$resp["ignore"])
-                                {
-                                    $slot["resp_ord"] = $r_ord;
-                                    $pct_filled += resp_pct_done($slot);
-                                    $resp_qnt++;
-                                }
-                            if ($resp_qnt)
-                                $pct_filled /= $resp_qnt;
+                            $notice_list[0] = $date_of_now; // set value to cur date to indicate we already done this
+                            $made_changes = true;
+                            $message = "Добрый день.<br>";
+                            $message .= "Дата прохождения опроса ". $qz["name"] ." в вашей учетной записи истекла.";
+                            $message .= $mess_sub;
+                            $subject = "Система 360, дата прохождения опроса вышла";
+                            if (!IS_LOCAL && $send_enabled)
+                                sendMail($subject, $message, $admin_mail);
+                            array_push($scheduler_data, array(
+                                "type" => "REPORT ON QUIZ EXPIRED DATE",
+                                "subject" => $subject,
+                                "message" => $message,
+                                "admin_mail" => $admin_mail
+                            ));
+                        }
+                    }
 
-                            echo ("\n group $gr_ord completion %: $pct_filled, resp qnt: $resp_qnt, target: $pct_target");
+                    // 2 - REPORT ON QZ COMPLETE
+                    if ($notice_list[1]*1 === 1)
+                    {
+                        if ($qz["status"]*1 === 1)
+                        {
+                            $notice_list[1] = $date_of_now; // set value to cur date to indicate we already done this
+                            $made_changes = true;
+                            $message = "Добрый день.<br>";
+                            $message .= "Опрос ". $qz["name"] ." пройден всеми респондентам.";
+                            $message .= $mess_sub;
+                            $subject = "Система 360, опроса завершен";
+                            if (!IS_LOCAL && $send_enabled)
+                                sendMail($subject, $message, $admin_mail);
+                            array_push($scheduler_data, array(
+                                "type" => "REPORT ON QZ COMPLETE",
+                                "subject" => $subject,
+                                "message" => $message,
+                                "admin_mail" => $admin_mail
+                            ));
+                        }
+                    }
 
-                            if ($pct_filled >= $pct_target)
+                    // 3 - REPORT ON QZ COMPLETION %
+                    if (is_array($notice_list[2]) || $notice_list[2]*1 === 1)
+                    {
+                        if (!is_array($notice_list[2]))
+                        {
+                            $notice_list[2] = array();
+                            foreach ($resps as $group)
+                                array_push($notice_list[2], 0);
+                        }
+
+                        $pct_target = $sts["notice_pct"] / 100;
+                        $pct_filled = 0;
+                        $slot = array(
+                            "settings" => $sts,
+                            "resps" => $resps
+                            //"qz_ord" => $qz_ord
+                        );
+
+                        foreach ($resps as $gr_ord => $group) // get avg pct of completion across all groups
+                            if (!$notice_list[2][$gr_ord])
                             {
-                                $notice_list[2][$gr_ord] = $date_of_now; // set value to cur date to indicate we already done this
-                                $made_changes = true;
+                                $slot["gr_ord"] = $gr_ord;
+                                $pct_filled = 0; //resp_pct_done($slot);
+                                $resp_qnt = 0;
+                                foreach ($group as $r_ord => $resp)
+                                    if (!$resp["ignore"])
+                                    {
+                                        $slot["resp_ord"] = $r_ord;
+                                        $pct_filled += resp_pct_done($slot);
+                                        $resp_qnt++;
+                                    }
+                                if ($resp_qnt)
+                                    $pct_filled /= $resp_qnt;
+
+                                echo ("\n group $gr_ord completion %: $pct_filled, resp qnt: $resp_qnt, target: $pct_target");
+
+                                if ($pct_filled >= $pct_target)
+                                {
+                                    $notice_list[2][$gr_ord] = $date_of_now; // set value to cur date to indicate we already done this
+                                    $made_changes = true;
+                                    $focus = $group[0]["id"] * 1 ;
+                                    foreach ($_SESSION["resps"] as $resp)
+                                        if ($resp["id"]*1 === $focus)
+                                        {
+                                            $focus = $resp["fio"];
+                                            break;
+                                        }
+
+                                    $message = "Добрый день.<br>";
+                                    $message .= "В опросе ". $qz["name"] ." фокус-группа ". $focus ." заполнена на ". floor($pct_target * 100) ."%.";
+                                    $message .= $mess_sub;
+                                    $subject = "Система 360, группа $focus завершена на ". floor($pct_target * 100) ."%.";
+                                    if (!IS_LOCAL && $send_enabled)
+                                        sendMail($subject, $message, $admin_mail);
+                                    array_push($scheduler_data, array(
+                                        "type" => "REPORT ON GROUP % COMPLETION, GROUP #$gr_ord",
+                                        "subject" => $subject,
+                                        "message" => $message,
+                                        "admin_mail" => $admin_mail
+                                    ));
+                                }
+                            }
+                    }
+
+                    // 4 - DAILY ON COMPLETION
+                    if ($notice_list[3]*1 !== 0 && $qz["status"]*1 === 0 && $sts["end_date"]*1 < $date_of_now)
+                    {
+                        // First time or a [day period set] have passed since
+                        if ($notice_list[3]*1 === 1 || $notice_list[3]*1 + $reminders_period <= $date_of_now)
+                        {
+                            $notice_list[3] = $date_of_now;
+                            $made_changes = true;
+                            $slot = array(
+                                "settings" => $sts,
+                                "resps" => $resps
+                            );
+
+                            $subject = "Система 360, ежедневный отчет по опросу ". $qz["name"];
+                            $message = "Добрый день.<br>";
+
+                            foreach ($resps as $gr_ord => $group) // get avg pct of completion across all groups
+                            {
+                                $slot["gr_ord"] = $gr_ord;
+                                $resps_qnt = 0;
+                                foreach ($group as $resp_ord => $resp)
+                                    if (!$resp["ignore"]) // resp is not excluded from quiz completion
+                                    {
+                                        $slot["resp_ord"] = $resp_ord;
+                                        $pct_filled += resp_pct_done($slot);
+                                        $resps_qnt++;
+                                    }
+
+                                if ($resps_qnt)
+                                    $pct_filled /= $resps_qnt; // get the completion % of the group
+
+
                                 $focus = $group[0]["id"] * 1 ;
-                                foreach ($_SESSION["resps"] as $resp)
+                                foreach ($_SESSION["resps"] as $resp) // get the name of focus-person
                                     if ($resp["id"]*1 === $focus)
                                     {
                                         $focus = $resp["fio"];
                                         break;
                                     }
 
-                                $message = "Добрый день.<br>";
-                                $message .= "В опросе ". $qz["name"] ." фокус-группа ". $focus ." заполнена на ". floor($pct_target * 100) ."%.";
-                                $message .= $mess_sub;
-                                $subject = "Система 360, группа $focus завершена на ". floor($pct_target * 100) ."%.";
-                                if (!IS_LOCAL && $send_enabled)
-                                    sendMail($subject, $message, $admin_mail);
-                                array_push($scheduler_data, array(
-                                    "type" => "REPORT ON GROUP % COMPLETION, GROUP #$gr_ord",
-                                    "subject" => $subject,
-                                    "message" => $message,
-                                    "admin_mail" => $admin_mail
-                                ));
+                                $message .= "В опросе ". $qz["name"] ." фокус-группа ". $focus ." заполнена на ". floor($pct_filled * 100) ."%.";
                             }
-                        }
-                }
 
-                // 4 - DAILY ON COMPLETION
-                if ($notice_list[3]*1 !== 0 && $qz["status"]*1 === 0 && $sts["end_date"]*1 < $date_of_now)
-                {
-                    // First time or a [day period set] have passed since
-                    if ($notice_list[3]*1 === 1 || $notice_list[3]*1 + $reminders_period <= $date_of_now)
+                            $message .= $mess_sub;
+                            if (!IS_LOCAL && $send_enabled)
+                                sendMail($subject, $message, $admin_mail);
+                            array_push($scheduler_data, array(
+                                "type" => "DAYLY REPORT ON GROUP % COMPLETION",
+                                "subject" => $subject,
+                                "message" => $message,
+                                "admin_mail" => $admin_mail
+                            ));
+                        }
+                    }
+
+                    // 6 - DAYLY REMINDERS FOR EVERY UNFINISHED RESP
+                    if ($notice_list[5]*1 === 1 && !$qz["status"]*1)
                     {
-                        $notice_list[3] = $date_of_now;
-                        $made_changes = true;
+                        $pct_filled = 0;
                         $slot = array(
                             "settings" => $sts,
                             "resps" => $resps
+                            //"qz_ord" => $qz_ord
                         );
 
-                        $subject = "Система 360, ежедневный отчет по опросу ". $qz["name"];
-                        $message = "Добрый день.<br>";
-
-                        foreach ($resps as $gr_ord => $group) // get avg pct of completion across all groups
-                        {
-                            $slot["gr_ord"] = $gr_ord;
-                            $resps_qnt = 0;
-                            foreach ($group as $resp_ord => $resp)
-                                if (!$resp["ignore"]) // resp is not excluded from quiz completion
-                                {
-                                    $slot["resp_ord"] = $resp_ord;
-                                    $pct_filled += resp_pct_done($slot);
-                                    $resps_qnt++;
-                                }
-
-                            if ($resps_qnt)
-                                $pct_filled /= $resps_qnt; // get the completion % of the group
-
-
-                            $focus = $group[0]["id"] * 1 ;
-                            foreach ($_SESSION["resps"] as $resp) // get the name of focus-person
-                                if ($resp["id"]*1 === $focus)
-                                {
-                                    $focus = $resp["fio"];
-                                    break;
-                                }
-
-                            $message .= "В опросе ". $qz["name"] ." фокус-группа ". $focus ." заполнена на ". floor($pct_filled * 100) ."%.";
-                        }
-
-                        $message .= $mess_sub;
-                        if (!IS_LOCAL && $send_enabled)
-                            sendMail($subject, $message, $admin_mail);
-                        array_push($scheduler_data, array(
-                            "type" => "DAYLY REPORT ON GROUP % COMPLETION",
-                            "subject" => $subject,
-                            "message" => $message,
-                            "admin_mail" => $admin_mail
-                        ));
-                    }
-                }
-
-                // 6 - DAYLY REMINDERS FOR EVERY UNFINISHED RESP
-                if ($notice_list[5]*1 === 1 && !$qz["status"]*1)
-                {
-                    $pct_filled = 0;
-                    $slot = array(
-                        "settings" => $sts,
-                        "resps" => $resps
-                        //"qz_ord" => $qz_ord
-                    );
-
-                    foreach ($resps as $gr_ord => &$group) // get avg pct of completion across all groups
+                        foreach ($resps as $gr_ord => &$group) // get avg pct of completion across all groups
                         {
                             $slot["gr_ord"] = $gr_ord;
                             foreach ($group as $resp_ord => &$resp)
@@ -288,29 +291,30 @@ if (is_array($crew))
                                     }
                                 }
                         }
-                }
-
-                if ($made_changes)
-                {
-                    $updated_sts = true_json_code($sts);
-                    $updated_resps = true_json_code($resps);
-                    try
-                    {
-                        $q = $cdb->send_query("UPDATE quiz SET settings = '". $updated_sts . "', resps = '". $updated_resps . "' WHERE id = ". $qz["id"] . " AND madeby = " . $_SESSION['pers']['id']);
                     }
-                    catch (PDOException $e)
-                    {
-                        array_push($scheduler_data, array(
-                            "subject" => "error on quiz's DB settings update",
-                            "message" => $e->getMessage(),
-                            "admin_mail" => null
-                        ));
-                        //log_add("scheduler cycle error: ". $e->getMessage());
-                    }
-                }
 
-                unset($resps);
-                unset($notice_list);
+                    if ($made_changes)
+                    {
+                        $updated_sts = true_json_code($sts);
+                        $updated_resps = true_json_code($resps);
+                        try
+                        {
+                            $q = $cdb->send_query("UPDATE quiz SET settings = '". $updated_sts . "', resps = '". $updated_resps . "' WHERE id = ". $qz["id"] . " AND madeby = " . $_SESSION['pers']['id']);
+                        }
+                        catch (PDOException $e)
+                        {
+                            array_push($scheduler_data, array(
+                                "subject" => "error on quiz's DB settings update",
+                                "message" => $e->getMessage(),
+                                "admin_mail" => null
+                            ));
+                            //log_add("scheduler cycle error: ". $e->getMessage());
+                        }
+                    }
+
+                    unset($resps);
+                    unset($notice_list);
+                }
                 unset($sts);
             }
     }
