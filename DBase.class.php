@@ -710,7 +710,7 @@ class DBase{
 
             case "full_list":
                 {
-                    $q = $this->send_query("SELECT id, login, name, spec, cd, ud, mail, last_log, added_by, access, phone, branch, comp, emplo_qnt, valid FROM pers WHERE NOT access >= 4 ORDER BY cd DESC");// ORDER BY cd DESC
+                    $q = $this->send_query("SELECT id, login, name, spec, cd, ud, mail, last_log, added_by, access, phone, comp, valid FROM pers ORDER BY cd DESC");// ORDER BY cd DESC , WHERE NOT access >= 4
 
                     if ($q)
                     {
@@ -733,8 +733,6 @@ class DBase{
                                     "name" => $pers["name"],
                                     "spec" => $pers["spec"],
                                     "comp" => $pers["comp"],
-                                    "branch" => $pers["branch"],
-                                    "emplo_qnt" => intval($pers["emplo_qnt"]),
                                     "cd" => $pers["cd"] * 1,
                                     "ud" => $pers["ud"] * 1,
                                     "mail" => $pers["mail"],
@@ -1677,9 +1675,12 @@ class DBase{
                                 $chk_slot["gr_ord"] = $ans["group_ord"];
                                 $chk_slot["resp_ord"] = $ans["resp_ord"];
 
+                                $qb_pct_done = resp_pct_done($chk_slot, $QBOOKS);
+                                $fb_done = resp_fb_done($chk_slot);;
+
                                 if ($resp["ord"] === null)
                                     $ans["error"] = "Нет такого респондента в опросе.";
-                                elseif (resp_pct_done($chk_slot, $QBOOKS) >= 1)
+                                elseif ($qb_pct_done >= 1 && $fb_done)
                                     $ans["error"] = "Опрос Вами успешно заполнен.";
                                 else
                                 {
@@ -1734,6 +1735,7 @@ class DBase{
                                     foreach ($QBOOKS as $ordz => $qb)
                                         if ($qb["id"]*1 === $qb_id*1)
                                         {
+                                            file_put_contents("0_qb_qnt.txt", "qb_order: $ordz");
                                             $qb_ord = $ordz;
                                             break;
                                         }
@@ -1814,19 +1816,48 @@ class DBase{
 
             case "record_answer":
                 {
-                    $file = "resp_rec_chk.txt";
+
                     $d = json_decode($info);
+
+                    // BACKUP ANSWERS SAVE
+                    if (!is_dir(BACKUP_ANSWERS_DIR))
+                        mkdir(BACKUP_ANSWERS_DIR, 0777, true);
+                    $filename = BACKUP_ANSWERS_DIR . "/q_". $d->qkey ."_r_".$d->rkey .".txt";
+                    if (!file_exists($filename))
+                    {
+                        $cli_data = array();
+                        $cli_data["answers"] = array();
+                        $cli_data["ans_list"] = array();
+                    }
+
+                    $cli_data = json_decode(file_get_contents($filename), true);
+                    if (!isset($cli_data["answers"]))
+                    {
+                        $cli_data = array();
+                        $cli_data["answers"] = array();
+                        $cli_data["ans_list"] = array();
+                    }
+                    $cli_data["answers"][$d->qst_ord * 1] = $d->pts * 1;
+                    $cli_data["ans_list"] = $d->ans_list;
+
+                    file_put_contents($filename, json_encode($cli_data));
+
+                    /*
+                    $file = "resp_rec_chk.txt";
                     file_put_contents($file, "\n\n record_answer: ". $info, FILE_APPEND);
+                    */
+
+                    // Main DB answer record
                     $q = $this->send_query("SELECT resps, settings, madeby FROM quiz WHERE qkey = '". $d->qkey ."'");
                     if ($q)
                     {
                         $data = $q->fetchAll(PDO::FETCH_ASSOC);
-                        file_put_contents($file, " \n count of quizes by a key: ". count($data), FILE_APPEND);
+                        //file_put_contents($file, " \n count of quizes by a key: ". count($data), FILE_APPEND);
                         if (count($data) !== 1)
                             $ans = false;
                         else
                         {
-                            file_put_contents($file, " \n qz count match: ", FILE_APPEND);
+                            //file_put_contents($file, " \n qz count match: ", FILE_APPEND);
                             $settings = true_json_code($data[0]["settings"], "decode");
                             $resps = true_json_code($data[0]["resps"], "decode");
                             $pers_id = $data[0]["madeby"] * 1;
@@ -1853,7 +1884,7 @@ class DBase{
                                     foreach ($group as $resp_ord => $r)
                                     {
                                         $chk_slot["resp_ord"] = $resp_ord;
-                                        file_put_contents($file, " \n key  gr:$gr_ord re:$resp_ord  completion: " . resp_pct_done($chk_slot, $QBOOKS), FILE_APPEND);
+                                        //file_put_contents($file, " \n key  gr:$gr_ord re:$resp_ord  completion: " . resp_pct_done($chk_slot, $QBOOKS), FILE_APPEND);
                                         if (!$r["ignore"] && resp_pct_done($chk_slot, $QBOOKS) < 1) // not excluded and not all qsts answered
                                         {
                                             $qz_status = 0;
@@ -1874,42 +1905,24 @@ class DBase{
 
                             // Update info in DB
                             $resps = true_json_code($resps);
-                            file_put_contents($file, " \n before qz update: ", FILE_APPEND);
+                            //file_put_contents($file, " \n before qz update: ", FILE_APPEND);
                             $this->send_query("UPDATE quiz SET status = '$qz_status', resps = '$resps' WHERE qkey = '". $d->qkey ."'");
                             $ans = true;
                         }
                     }
-
-                    file_put_contents($file, " \n answer is: ". $ans, FILE_APPEND);
-
-                    // BACKUP ANSWERS SAVE
-                    if (!is_dir(BACKUP_ANSWERS_DIR))
-                        mkdir(BACKUP_ANSWERS_DIR, 0777, true);
-                    $filename = BACKUP_ANSWERS_DIR . "/q_". $d->qkey ."_r_".$d->rkey .".txt";
-                    if (!file_exists($filename))
-                    {
-                        $cli_data = array();
-                        $cli_data["answers"] = array();
-                        $cli_data["ans_list"] = array();
-                    }
-
-                    $cli_data = json_decode(file_get_contents($filename), true);
-                    if (!isset($cli_data["answers"]))
-                    {
-                        $cli_data = array();
-                        $cli_data["answers"] = array();
-                        $cli_data["ans_list"] = array();
-                    }
-                    $cli_data["answers"][$d->qst_ord * 1] = $d->pts * 1;
-                    $cli_data["ans_list"] = $d->ans_list;
-
-                    file_put_contents($filename, json_encode($cli_data));
+                    //file_put_contents($file, " \n answer is: ". $ans, FILE_APPEND);
                     break;
                 }
 
             case "user_feedback":
                 {
                     $d = json_decode($info);
+
+                    // BACKUP ANSWERS SAVE
+                    if (!is_dir(BACKUP_ANSWERS_DIR))
+                        mkdir(BACKUP_ANSWERS_DIR, 0777, true);
+                    file_put_contents(BACKUP_ANSWERS_DIR . "/feedback_q_". $d->qkey ."_r_".$d->rkey .".txt", json_encode($d->feedback, JSON_UNESCAPED_UNICODE));
+
                     $q = $this->send_query("SELECT resps FROM quiz WHERE qkey = '". $d->qkey ."'");
                     if ($q)
                     {
@@ -1930,10 +1943,6 @@ class DBase{
                         }
                     }
 
-                    // BACKUP ANSWERS SAVE
-                    if (!is_dir(BACKUP_ANSWERS_DIR))
-                        mkdir(BACKUP_ANSWERS_DIR, 0777, true);
-                    file_put_contents(BACKUP_ANSWERS_DIR . "/feedback_q_". $d->qkey ."_r_".$d->rkey .".txt", json_encode($d->feedback, JSON_UNESCAPED_UNICODE));
                     break;
                 }
 
@@ -2830,6 +2839,8 @@ class DBase{
             if ("no_recon" !== $mode)
                 $this->DB_close($q);
 
+
+
             if (!$alter_pid)
                 return true;
             else
@@ -3117,7 +3128,10 @@ class DBase{
                                     foreach ($bro[$key] as &$group)
                                         foreach ($group as &$resp_slot)
                                         {
-                                            $filename = BACKUP_ANSWERS_DIR . "/q_". $qkey."_r_". $resp_slot->ukey . ".txt";
+                                            $filename_comm = BACKUP_ANSWERS_DIR . "/feedback_q_". $qkey."_r_". $resp_slot->ukey . ".txt"; // backup comments file
+                                            $filename = BACKUP_ANSWERS_DIR . "/q_". $qkey."_r_". $resp_slot->ukey . ".txt"; // backup anwers file
+
+                                            // REstore from answers backup if something is missing
                                             if (file_exists($filename))
                                             {
                                                 $backup = json_decode(file_get_contents($filename),true);
@@ -3130,6 +3144,23 @@ class DBase{
                                                         if (-1 === intval($ans_val) && null !== $backup_list[$ind])
                                                             $ans_val = $backup_list[$ind];
                                             }
+
+                                            // REstore from answers backup if something is missing
+                                            /*
+                                            if (file_exists($filename_comm))
+                                            {
+                                                $backup_comm = json_decode(file_get_contents($filename_comm));
+
+                                                // full recovery needed
+                                                if (!$resp_slot->feedback || !count($resp_slot->feedback))
+                                                    $resp_slot->feedback = $backup_comm;
+                                                else
+                                                {
+                                                    // QZ LIST comments
+                                                    if (!isset($resp_slot->feedback->qz_list))
+                                                }
+                                            }
+                                            */
                                         }
                                 }
                             }

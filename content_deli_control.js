@@ -143,6 +143,35 @@ function content_deli_control_build_list(do_return) {
                 .append(content_deli_control_status_icon(pct_done));
         });
 
+        $(".resp_line .qz_status .status_icon")
+            .off("mouseenter").off("mouseleave").mouseleave(function() {$(".floater").css("display", "none").html("");})
+            .mouseenter(function()
+            {
+                let resp_ord = $(this).closest(".resp_line").attr("resp_ord") * 1;
+                if (!resp_ord) // only for focus-resp icons
+                {
+                    let gr_ord = $(this).closest(".resp_line").attr("batch_ord") * 1;
+                    let qz = $ad.qzs[$session.opened_qz_ord];
+                    let qb_name = get_qb_ord_from_qb_id(qz.settings.comm_groups[gr_ord].qb_id);
+                    qb_name = $ad.qbooks[qb_name].name;
+                    //let pos = $(this).offset();
+                    let tx = "";
+                    tx += "<div class='head'>Информация о группе</div>";
+                    tx += "<span class='label'>Опросник: </span>" + qb_name;
+
+                    $(".floater")
+                        .css("display", "inline-block")
+                        .css("width", "450px")
+                        //.css("height", "350px")
+                        .css("left", ($curs.x-480)+"px")
+                        .css("top", $curs.y+"px")
+                        .css("border-color", "#4A67AD")
+                        .html(tx);
+                }
+
+
+            });
+
         $(".resp_line .show_batch")
             .off("click")
             .click(function()
@@ -578,7 +607,19 @@ function content_deli_resp_pct_done(data, feedback)
 
     if (feedback)
         console.log("check qz "+ qz.name + " answered/qst_qnt  " + answered + " / " + qst_qnt);
-    return Math.floor((answered * 100) / qst_qnt);
+    let pct = Math.floor((answered * 100) / qst_qnt);
+    if (pct >= 100)
+    {
+        pct = 100;
+        let fb_done = get_resp_fb_done({
+            qz_ord: data.qz_ord,
+            gr_ord: data.gr_ord,
+            resp_ord: data.resp_ord});
+        if (!fb_done)
+            pct = 99;
+    }
+
+    return pct;
 }
 //----------------------------------------------------------------------------------------------------------------------
 function content_deli_control_qzs_status()

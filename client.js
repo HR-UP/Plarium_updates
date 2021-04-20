@@ -449,6 +449,9 @@ function sendAJ($tag,$data) {
                 {
                     if ($ajResponse[z].responseText)
                     {
+                        if ("yX6QU" === $qkey)
+                            $(".logo").css("display","none");
+
                         $clidata = JSON.parse($ajResponse[z].responseText);
                         $clidata.comments = {};
                         if ($clidata.hasOwnProperty('error'))
