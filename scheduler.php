@@ -228,7 +228,7 @@ if (is_array($crew))
                     }
 
                     // 6 - DAYLY REMINDERS FOR EVERY UNFINISHED RESP
-                    if ($notice_list[5]*1 === 1 && !$qz["status"]*1)
+                    if ($notice_list[5]*1 === 1 && !($qz["status"]*1))
                     {
                         $pct_filled = 0;
                         $slot = array(
