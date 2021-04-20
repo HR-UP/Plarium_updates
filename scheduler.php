@@ -305,7 +305,7 @@ if (is_array($crew))
                             "message" => $e->getMessage(),
                             "admin_mail" => null
                         ));
-                        log_add("scheduler cycle error: ". $e->getMessage());
+                        //log_add("scheduler cycle error: ". $e->getMessage());
                     }
                 }
 
