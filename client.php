@@ -58,6 +58,7 @@ echo "
         </div>
     </div>
     
+    <div class='clearance'></div>
     <div class='footer'>
         <div class='box'>
             <div class='label'>Нашли ошибку, возникли проблемы при прохождении опроса<br>или есть предложения как сделать опрос лучше? Напишите нам:</div>
