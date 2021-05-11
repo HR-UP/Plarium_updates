@@ -1,5 +1,5 @@
 <?php
-define("IS_LOCAL", true); // "true" only for developement, when using localhost like apache n stuff
+define("IS_LOCAL", false); // "true" only for developement, when using localhost like apache n stuff
 define("REPORT_IMAGES_DIR", "report_images"); // backup for orders on project
 define("REPORT_IMAGES_USER_DIR", "pers_");
 define("NO_COMP_HERE", "<div style='font-style: italic; text-align: center; box-sizing: border-box; margin: 0 auto;'>   Сюда не попала ни одна компетенция</div>");
