@@ -118,13 +118,13 @@ function resp_fb_done($d, $qbooks = null, $qsts = null)
     else
         $QB = $_SESSION['qbooks'];
 
-    if (null !== $qbooks)
+    if (null !== $qsts) // #BUG
         $QSTS = $qsts;
     else
-    {
         $QSTS = $_SESSION['qsts'];
-    }
 
+    $file_chk = "fb_done_chk.txt";
+    //file_put_contents($file_chk, "");
 
     // Get qbook qsts list
     $comm_group = $d["settings"]["comm_groups"][$d["gr_ord"]];
@@ -133,9 +133,12 @@ function resp_fb_done($d, $qbooks = null, $qsts = null)
 
     $comp_list_active = array(); // list of comp id's, that are turned on for this resp and can be questioned by mandatory comments
     $qst_db = $QSTS;
+    //file_put_contents($file_chk, "\nQSTS is array " . is_array($qst_db) . "_", FILE_APPEND);
 
     foreach ($struct["q_list"] as $q_id => $q)
-        if (isset($q["cats"]) && is_array($q["cats"][$cat_id]) && isset($q["cats"][$cat_id]["is_on"]))
+        if (isset($q["cats"]) &&
+            isset($q["cats"][$cat_id]) &&
+            isset($q["cats"][$cat_id]["is_on"]))
         {
             if (1 * $q["cats"][$cat_id]["is_on"]) // qst is on for this category
             {
@@ -154,6 +157,7 @@ function resp_fb_done($d, $qbooks = null, $qsts = null)
                 }
             }
         }
+    //file_put_contents($file_chk, "\ncomp_list_active " . json_encode($comp_list_active), FILE_APPEND);
 
     $resp_feedback_exist = false;
     $fb = $resp["feedback"];
@@ -163,6 +167,7 @@ function resp_fb_done($d, $qbooks = null, $qsts = null)
         $fb = $resp["feedback"];
     }
 
+    //file_put_contents($file_chk, "\nresp_feedback_exist " . $resp_feedback_exist, FILE_APPEND);
 
     if ($comm_group["qz_after"]) // there is comment after quiz
     {
@@ -193,13 +198,18 @@ function resp_fb_done($d, $qbooks = null, $qsts = null)
             }
     }
 
+    //file_put_contents($file_chk, "\nqz_after passed $passed, comm_group[\"comp_after\"] " . $comm_group["comp_after"], FILE_APPEND);
+
     if ($passed && $comm_group["comp_after"])
     {
         foreach ($comm_group["comp_list"] as $comp_id => $comp)
-            if (null !== $comp && in_array($comp_id, $comp_list_active))
+            if (null !== $comp && in_array($comp_id*1, $comp_list_active))
             {
+                //file_put_contents($file_chk, "\ncomp_id $comp_id is in active list", FILE_APPEND);
                 // Track every mandatory comp comment (a.k.a open question)
                 foreach ($comp as $comm_ord => $comment)
+                {
+                    //file_put_contents($file_chk, " is_locked" . $comm_group["lock_comp_list"][$comp_id][$comm_ord], FILE_APPEND);
                     if ($comm_group["lock_comp_list"][$comp_id][$comm_ord]*1 === 1) // comment is mandatory
                     {
                         if (!$resp_feedback_exist)
@@ -212,8 +222,9 @@ function resp_fb_done($d, $qbooks = null, $qsts = null)
                             isset($fb["comp_list"][$comp_id]) &&
                             isset($fb["comp_list"][$comp_id][$comm_ord]) &&
                             isset($fb["comp_list"][$comp_id][$comm_ord]["tx"])
-                            ) // no comment given for this after_comp open qst
+                        ) // no comment given for this after_comp open qst
                         {
+                            //file_put_contents($file_chk, " answered fb_tx: _" . $fb["comp_list"][$comp_id][$comm_ord]["tx"] ."_", FILE_APPEND);
                             if (!trim($fb["comp_list"][$comp_id][$comm_ord]["tx"]))
                             {
                                 $passed = false;
@@ -229,6 +240,8 @@ function resp_fb_done($d, $qbooks = null, $qsts = null)
                             break;
                         }
                     }
+                }
+
             }
     }
 
