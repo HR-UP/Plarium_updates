@@ -10,7 +10,6 @@ let $rkey,
     $ctrl_block = false,
     $unsaved_prg = false,
     $fb_prg = 0,
-    $fb_qnt = 0,
     $saveans_timer = 0,
     $saveans_phase = 0,
     $saveans_countdown = false,
@@ -76,7 +75,7 @@ $intro_other = "Уважаемый коллега!\n\n" +
 
 let $fb = {};
 $fb.qz_list = [];
-$fb.comp_list = [];
+$fb.comp_list = {};
 
 let default_intro_self = "Уважаемый коллега!<br><br>" +
     "Перед Вами – опрос 360 градусов. Пожалуйста, ответьте на вопросы о самом себе, Ваших деловых качествах и управленческом стиле<br>" +
@@ -105,6 +104,364 @@ $nosel = "onselectstart='return false' onmousedown='return false'";
 //****------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------
+
+let map = {
+    db: null,
+    formost: 0,
+    step: 0
+};
+
+map.get_last_unanswered_step = function () {
+
+    for (let i=0; i<$clidata.map.length; i++)
+    {
+        let slot = $clidata.map[i];
+        let o = slot.ord;
+        if ("qst" === slot.type)
+        {
+            if (!$clidata.ans_list.hasOwnProperty(o))
+            {
+                $qsts.cur = o;
+                map.step = i;
+                break;
+            }
+        }
+        else
+        if ("comment" === slot.type)
+        {
+            if ("comp" === slot.subtype)
+            {
+                let cid = slot.comp_id;
+                if (1 === $clidata.feedback.lock_comp_list[cid][o] && // mandatory comment
+                    !$fb.comp_list[cid][o].tx // answer waasn't given
+                )
+                {
+                    map.step = i;
+                    break;
+                }
+            }
+            else
+            {
+                if (1 === $clidata.feedback.lock_qz_list[o] && // mandatory comment
+                    !$fb.qz_list[o].tx // answer waasn't given
+                )
+                {
+                    map.step = i;
+                    break;
+                }
+            }
+        }
+    }
+    console.log("map.get_last_unanswered_step, map.step: " + map.step);
+};
+
+map.next_step = function (tag) {
+    console.log("map.next_step, tag: " + tag);
+    if ("back" === tag)
+    {
+        if (map.step >= 0)
+            map.step--;
+    }
+    else
+    if ("no_prg" !== tag)
+        map.step++;
+
+    if (map.step >= map.formost)
+        map.formost = map.step;
+
+    if (map.step >= map.db.length)
+        endscreen();
+    else
+    {
+
+        let slot = map.db[map.step];
+        switch (slot.type){
+            case "qst":
+                // Reset all triggers of qst screen
+                // Добавить обработчик событий
+                $(".ans_line .opt")
+                    .off("mouseenter")
+                    .off("mouseleave")
+                    .off("click")
+                    .click(function()
+                    {
+                        if (!$ctrl_block)
+                        {
+                            let form = {};
+                            form.pts = $(this).closest(".ans_line").attr("pts") * 1;
+                            form.qst_ord = map.db[map.step].ord; //$qsts.cur;
+                            $clidata.ans_list[form.qst_ord] = form.pts; // record answer localy so algo can detect the next unanswered qst
+                            form.resp_ord = $clidata.resp_ord * 1;
+                            form.group_ord = $clidata.group_ord * 1;
+                            form.rkey = $rkey;
+                            form.qkey = $qkey;
+                            form.ans_list = $clidata.ans_list;
+                            form.map_step = map.step;
+                            form.map_len = map.db.length;
+
+                            if (is_test_link) // avoid data recordings
+                            {
+                                map.next_step();
+                                $ctrl_block = false;
+                            }
+                            else
+                            {
+                                $ctrl_block = true;
+                                $unsaved_prg = true;
+                                roll_answer_delay(1);
+                                sendAJ("record_answer",JSON.stringify(form)); // upon saving confirm we will move to the next qst
+                            }
+                        }
+                    });
+
+                // Onhover animation
+                if (!window.mobilecheck())
+                    $(".ans_line .opt")
+                        .mouseenter(function()
+                        {
+                            let opts_max_ord = $clidata.answer_opts_list.length - 1;
+                            let ord = $(this).closest("td").attr("ord") * 1;
+                            if (ord === opts_max_ord)
+                            {
+                                $(this).attr("state", 1);
+                            }
+                            else
+                            {
+                                $(".ans_line .opt").each(function () {
+                                    let his_ord = $(this).closest("td").attr("ord") * 1;
+                                    if (his_ord !== opts_max_ord)
+                                    {
+                                        if (his_ord > ord)
+                                            $(this).attr("state", 1);
+                                        else
+                                        if (his_ord === ord)
+                                            $(this).attr("state", 2);
+                                        else
+                                            $(this).attr("state", 0);
+                                    }
+                                });
+                            }
+
+                        })
+                        .mouseleave(function()
+                        {
+                            let opts_max_ord = $clidata.answer_opts_list.length - 1;
+                            let ord = $(this).closest("td").attr("ord") * 1;
+                            if (ord === opts_max_ord)
+                            {
+                                $(this).attr("state", 0);
+                            }
+                            else
+                            {
+                                $(".ans_line .opt").each(function () {
+                                    let his_ord = $(this).closest("td").attr("ord") * 1;
+                                    if (his_ord !== opts_max_ord)
+                                        $(this).attr("state", 0);
+                                });
+                            }
+                        });
+
+                let q_ord = map.db[map.step].ord;
+                let local_qst_ord = 0;
+                map.db.forEach(function (v_slot, i_slot) {
+                    if ("qst" === v_slot.type && i_slot <= map.step)
+                        local_qst_ord++;
+                });
+
+                $(".qst_cntr .tx")
+                    .empty()
+                    .append("Вопрос: <b>" + local_qst_ord + "/" + $qsts.max + "</b>");
+
+                $(".qst_cntr .fillbar_front")
+                    .css("width", (100 * local_qst_ord / $qsts.max) + "%");
+
+                // Special qst for certain quizes with 2 textareas
+                $(".ans_box .ans_line").css("display", "table-cell");
+                $(".ans_box textarea").css("display", "none");
+
+                $(".qst_cntr .comp_name").html("<span class='label'>Компетенция:</span> "+ $clidata.comp_names_list[q_ord]);
+                $(".qst_box").html($qsts.tx[q_ord]);
+
+                // Set answer, if was alrady given
+                $(".ans_line").each(function () {
+                    $(this).find(".opt").attr("type", "0");
+                    let pts = $(this).attr("pts") * 1;
+                    if ($clidata.ans_list.hasOwnProperty(q_ord))
+                    {
+                        if (!pts)
+                        {
+                            if ($clidata.ans_list[q_ord] === pts)
+                                $(this).find(".opt").attr("state", "1");
+                            else
+                                $(this).find(".opt").attr("state", "0");
+                        }
+                        else
+                        if (pts === $clidata.ans_list[q_ord])
+                            $(this).find(".opt").attr("state", "2");
+                        else
+                        if (pts < $clidata.ans_list[q_ord])
+                            $(this).find(".opt").attr("state", "1");
+                        else
+                            $(this).find(".opt").attr("state", "0");
+                    }
+                });
+
+                map.window_set("qst", "show");
+                break;
+
+            case "comment":
+                if ("comp" === slot.subtype)
+                {
+                    $clidata.fb_tag = "comp";
+                    $fb_prg = slot.ord;
+                    let comp_id = slot.comp_id;
+
+                    // Form a question header
+                    let tx = $clidata.feedback.comp_list[comp_id][$fb_prg];
+                    // Add mandatory sign "red star" to the end of the question
+                    if ($clidata.feedback.lock_comp_list &&
+                        $clidata.feedback.lock_comp_list.hasOwnProperty(comp_id) &&
+                        $clidata.feedback.lock_comp_list[comp_id].hasOwnProperty($fb_prg) &&
+                        1 === 1 * $clidata.feedback.lock_comp_list[comp_id][$fb_prg]
+                    )
+                        tx += "<div class='musthave'>*</div>";
+                    $(".fb_wnd .ta_head").html(tx);
+
+                    let next_qst_ans = "";
+                    if ($fb.comp_list.hasOwnProperty(comp_id) &&
+                        $fb.comp_list[comp_id].hasOwnProperty($fb_prg) &&
+                        $fb.comp_list[comp_id][$fb_prg].tx
+                    )
+                        next_qst_ans = $fb.comp_list[comp_id][$fb_prg].tx;
+
+                    $(".fb_wnd .ta").val(next_qst_ans); // Set new qst_tx to comment on
+                }
+                else
+                {
+                    $clidata.fb_tag = "qz";
+                    $fb_prg = slot.ord;
+
+                    // Form a question header
+                    tx = $clidata.feedback.qz_list[$fb_prg];
+                    if ($clidata.feedback.lock_qz_list[$fb_prg])
+                        tx += "<div class='musthave'>*</div>";
+
+                    $(".fb_wnd .ta_head").html(tx);
+                    map.window_set("feedback", "show");
+
+                    // Fill already given comment, if any
+                    next_qst_ans = "";
+                    if ($fb.qz_list.hasOwnProperty($fb_prg) && $fb.qz_list[$fb_prg].tx)
+                        next_qst_ans = $fb.qz_list[$fb_prg].tx;
+                    $(".fb_wnd .ta").val(next_qst_ans);
+
+                }
+                map.window_set("feedback", "show");
+                break;
+        }
+    }
+};
+
+map.window_set = function (wnd_name, action) {
+    console.log("map.window_set: " + wnd_name + ", action: " + action);
+    switch (wnd_name){
+
+        case "qst":
+            if ("show" === action)
+            {
+                map.window_set("feedback", "hide");
+                $(".qst_box").css("display","block");
+                $(".qst_cntr").css("display","block");
+                $(".hint_box").css("display","block");
+                $(".ans_box").css("display","table");
+                $(".btn[action='back']").css("display","block");
+            }
+            else
+            {
+                $(".qst_box").css("display","none");
+                $(".qst_cntr").css("display","none");
+                $(".hint_box").css("display","none");
+                $(".ans_box").css("display","none");
+                $(".btn[action='back']").css("display","none");
+            }
+            break;
+
+        case "feedback":
+            if ("show" === action)
+            {
+                map.window_set("qst", "hide");
+                //$(".fb_wnd .ta_head").html(str);
+                $(".fb_wnd").css("display","block");
+                $(".btn[action='back']").css("display","block");
+            }
+            else
+            {
+                $(".fb_wnd").css("display","none");
+                $(".btn[action='back']").css("display","none");
+            }
+            break;
+    }
+};
+
+map.feedback_save = function () {
+    let form = {};
+    form.qkey = $qkey;
+    form.rkey = $rkey;
+    form.resp_ord = $clidata.resp_ord * 1;
+    form.group_ord = $clidata.group_ord * 1;
+    form.feedback = $fb; //  $(".ta").val();
+    form.map_step = map.step;
+    form.map_len = map.db.length;
+    sendAJ("user_feedback", JSON.stringify(form)); // calls endscreen on success
+};
+
+map.start_screen = function () {
+    console.log("map.start_screen");
+    $(".qst_box").css("display","none");
+    $(".ans_box").css("display","none");
+    $(".btn[action='back']").css("display","none");
+    if (!$clidata.hasOwnProperty('error'))
+    {
+        let $text = setIntroText();
+        $(".content").append($text);
+
+        $(".btn[action='start_qz']")
+            .off("click")
+            .click(function ()
+            {
+                // Remove self UI
+                $(".invite_text").css("display", "none");
+                $(this).css("display", "none");
+                if ($clidata.hasOwnProperty("map_step"))
+                {
+                    map.step = $clidata.map_step;
+                    map.next_step(); // "no_prg" excluded cuz map_step is the last saved answer, not unanswered step
+                }
+
+                else
+                {
+                    map.get_last_unanswered_step();
+                    map.next_step("no_prg"); // since we already on the unnswered step ord - do not step on the next one with "no_prg" argument
+                }
+
+
+            });
+    }
+    // Short-end screen
+    else
+    {
+        $(".persona").css("display","none");
+        $(".qst_cntr").css("display","none");
+        $(".footer").css("display","none");
+        $(".client_body .head").css("background-color","white");
+        $(".client_body").css("background-color","white");
+        // NEW TEXT with exact reason explained
+        let tx = $clidata.error;
+        $(".content").append("<div class='invite_text' style='font-size: 26px; text-align: center;'>" + tx + "</div>");
+    }
+};
+
+
 function setIntroText(){
     let tx = bld_intro_text($clidata.intro_tx);
 
@@ -124,152 +481,59 @@ function getUrlValue($param){
                 return null;
 }
 //----------------------------------------------------------------------------------------------------------------------
-function feedback_save(){
-    let form = {};
-    form.qkey = $qkey;
-    form.rkey = $rkey;
-    form.resp_ord = $clidata.resp_ord * 1;
-    form.group_ord = $clidata.group_ord * 1;
-    form.feedback = $fb; //  $(".ta").val();
-    sendAJ("user_feedback", JSON.stringify(form)); // calls endscreen on success
-}
-//----------------------------------------------------------------------------------------------------------------------
-function start_feedback(section, prg) {
-/*
-    $(".qst_box").css("display","none");
-    $(".qst_cntr").css("display","none");
-    $(".hint_box").css("display","none");
-    $(".ans_box").css("display","none");
-*/
-    $clidata.fb_tag = section;
-    console.log("comment section started: " + $clidata.fb_tag);
-    let next_qst_ans = "";
-
-    // Set the first qst
-    if (section === "qz")
-    {
-        if (!$clidata.comm_qz_qnt)
-        {
-            console.log("no comment qst of after_qz: ");
-            endscreen();
-        }
-        else
-        {
-            if (undefined === prg)
-                $fb_prg = 0;
-            else
-                $fb_prg = prg;
-
-            let str = $clidata.feedback.qz_list[$fb_prg];
-            if ($clidata.feedback.lock_qz_list[$fb_prg])
-                str += "<div class='musthave'>*</div>";
-
-            $(".fb_wnd .ta_head").html(str);
-            $(".fb_wnd").css("display","block");
-
-            $(".qst_box").css("display","none");
-            $(".qst_cntr").css("display","none");
-            $(".hint_box").css("display","none");
-            $(".ans_box").css("display","none");
-
-            if ($fb.qz_list.hasOwnProperty($fb_prg) && $fb.qz_list[$fb_prg].tx)
-                next_qst_ans = $fb.qz_list[$fb_prg].tx;
-            //next_qst_ans =
-            $(".fb_wnd .ta").val(next_qst_ans); // Set new qst_tx to comment on
-        }
-    }
-    else
-    if (section === "comp")
-    {
-        if (undefined === prg)
-            $fb_prg = 0;
-        else
-            $fb_prg = prg;
-        let comp_id = $clidata.comp_id_list[$qsts.last];
-        let tx = $clidata.feedback.comp_list[comp_id][$fb_prg];
-        if ($clidata.feedback.lock_comp_list &&
-            $clidata.feedback.lock_comp_list[comp_id][$fb_prg])
-            tx += "<div class='musthave'>*</div>";
-
-        $(".fb_wnd .ta_head").html(tx);
-        $(".fb_wnd").css("display","block");
-
-        $(".qst_box").css("display","none");
-        $(".qst_cntr").css("display","none");
-        $(".hint_box").css("display","none");
-        $(".ans_box").css("display","none");
-
-        if ($fb.comp_list.hasOwnProperty(comp_id) && $fb.comp_list[comp_id].hasOwnProperty($fb_prg) && $fb.comp_list[comp_id][$fb_prg].tx)
-            next_qst_ans = $fb.comp_list[comp_id][$fb_prg].tx;
-        console.log("comment: " + next_qst_ans);
-        $(".fb_wnd .ta").val(next_qst_ans); // Set new qst_tx to comment on
-    }
-    else
-        console.log("wrong tag call in start_feedback");
-
+function roll_answer_delay(dur)
+{
+    // Show breakdown with grey scren for a N seconds
+    $(".mask").css("display", "block");
+    $saveans_timer = dur;
+    $saveans_countdown = true;
+    $saveans_interval = setInterval(function () {
+        answer_record_tracker();
+    }, 100);
 }
 //----------------------------------------------------------------------------------------------------------------------
 function bld_feedback_blocks() {
     let s = "";
 
+    // Build comment blocks structure for user feedback
     $comp_qsts_qnt = 0; // get total number of comment-qst for competentions (if enabled)
     if ($clidata.feedback.comp_after &&
         Object.keys($clidata.feedback.comp_list).length
     )
-        Object.keys($clidata.feedback.comp_list).map(function (k, i) {
-            let slot = $clidata.feedback.comp_list[k];
-            if ($clidata.comp_id_list.indexOf(k*1) !== -1 &&
-                null !== slot &&
-                slot.length
-            )
-                $comp_qsts_qnt += slot.length;
+        Object.keys($clidata.feedback.comp_list).map(function (v) {
+            let list = $clidata.feedback.comp_list[v];
+            let comp_id = v * 1;
+            $fb.comp_list[comp_id] = []; // slot for this comp
+            if (list.length)
+            {
+                $comp_qsts_qnt += list.length;
+                for (let i=0; i<list.length; i++)
+                    $fb.comp_list[comp_id].push({"tx": "", "accept":0}); // slot for each qst in this comp
+            }
         });
-
-    $qz_qsts_qnt = 0; // get total number of comment-qst for qz_end (if enabled)
-    if ($clidata.feedback.qz_after && $clidata.feedback.qz_list.length)
+    let $qz_qsts_qnt = 0; // get total number of comment-qst for qz_end (if enabled)
+    if ($clidata.feedback.qz_after &&
+        $clidata.feedback.qz_list.length)
+    {
         $qz_qsts_qnt = $clidata.feedback.qz_list.length;
+        for (let i=0; i<$qz_qsts_qnt; i++)
+            $fb.qz_list.push({"tx": "", "accept":0});
+    }
 
     $clidata.comm_comp_qnt = $comp_qsts_qnt;
     $clidata.comm_qz_qnt = $qz_qsts_qnt;
 
-    if ($comp_qsts_qnt + $qz_qsts_qnt)
-    {
-        s += "<div class='ta_head'>"+ "?" +":</div>" +
-            "<div class='es_head'>Оставьте комментарий</div>" +
-            "<textarea class='ta'></textarea>" +
-            //"<div class='sign'>" +
-            //"<div class='icon' state='0'></div>" +
-            //"<div class='tx'>подписать комментарий (будет известно, кто его оставил)</div>" +
-            //"</div>" +
-            "<div class='btn feedback' kind='next'>Дальше</div>";
+    if (($comp_qsts_qnt + $qz_qsts_qnt) &&
+        $clidata.hasOwnProperty("fb_log") &&
+        $clidata.fb_log &&
+        $clidata.fb_log.length !== 0
+    )
+        $fb = duplicate($clidata.fb_log);
 
-        if ($qz_qsts_qnt)
-            for (let i=0; i<$qz_qsts_qnt; i++)
-                $fb.qz_list.push({"tx": "", "accept":0});
-
-        if ($comp_qsts_qnt)
-        {
-            let comm_list = $clidata.feedback.comp_list;
-            $clidata.comp_id_list.forEach(function (v_comp_id) {
-                if (comm_list.hasOwnProperty(v_comp_id) &&
-                    null !== comm_list[v_comp_id] && comm_list[v_comp_id].length && // comp has any real comm-qst in it
-                    undefined === $fb.comp_list[v_comp_id]) // this comp_id is first time met
-                {
-                    $fb.comp_list[v_comp_id] = []; // slot for this comp
-                    for (let i=0; i<comm_list[v_comp_id].length; i++)
-                        $fb.comp_list[v_comp_id].push({"tx": "", "accept":0}); // slot for each qst in this comp
-                }
-            });
-        }
-
-        if ($clidata.hasOwnProperty("fb_log") && $clidata.fb_log && $clidata.fb_log.length !== 0)
-            $fb = duplicate($clidata.fb_log);
-    }
-
-    $(".fb_wnd").append(s);
 
     // EVENTS
     // On/off anonimity
+    /*
     $(".fb_wnd .sign .icon")
         .off("click")
         .click(function () {
@@ -289,7 +553,9 @@ function bld_feedback_blocks() {
                 $fb.comp_list[comp_id][$fb_prg].accept = Math.abs(state - 1);
             }
         });
+    */
 
+    // Change answer text
     $(".fb_wnd .ta").off("keyup")
         .keyup(function () {
             let comment_tx = $(".fb_wnd .ta").val().trim();
@@ -306,6 +572,7 @@ function bld_feedback_blocks() {
             }
         });
 
+    // Submit answer text
     $(".feedback")
         .off("click")
         .click(function () {
@@ -321,132 +588,24 @@ function bld_feedback_blocks() {
             else
             if ($clidata.fb_tag === "comp")
             {
-                let comp_id = $clidata.comp_id_list[$qsts.last];
+                let comp_id = map.db[map.step].comp_id; // $clidata.comp_id_list[$qsts.last];
                 $fb.comp_list[comp_id][$fb_prg].tx = comment_tx;
                 if ($clidata.feedback.lock_comp_list)
                     lock_item = $clidata.feedback.lock_comp_list[comp_id][$fb_prg];
             }
-            feedback_save();
 
             if (lock_item && !comment_tx) // is mandatory nad not filled at all
                 message_ex("show","info","direct","Данное поле комментария обязательно к заполнению.");
             else
-                feedback_progress(1);
+            {
+                roll_answer_delay(1.5);
+                map.feedback_save(); //feedback_progress(1);
+            }
+
         });
 }
-//----------------------------------------------------------------------------------------------------------------------
-function feedback_progress(mod) {
-    $fb_prg += mod;
-    let end_of_block = false;
-    let roll_next = true;
-    let next_qst_tx = "";
-    let next_qst_ans = "";
-    $(".fb_wnd .ta").val(""); // Clear the feedback text
-    $(".fb_wnd .sign .icon").attr("state", 0);
-    // End of comment block
-    if ($clidata.fb_tag === "qz")
-    {
-        if ($fb_prg >= $clidata.comm_qz_qnt)
-            end_of_block = true;
-        else
-        {
-            next_qst_tx = $clidata.feedback.qz_list[$fb_prg];
-            if ($clidata.feedback.lock_qz_list && $clidata.feedback.lock_qz_list[$fb_prg])
-                next_qst_tx += "<div class='musthave'>*</div>";
-        }
 
 
-        if ($fb.qz_list.hasOwnProperty($fb_prg) && $fb.qz_list[$fb_prg].tx)
-            next_qst_ans = $fb.qz_list[$fb_prg].tx;
-
-
-    }
-    else
-    if ($clidata.fb_tag === "comp")
-    {
-        let comp_id = $clidata.comp_id_list[$qsts.last];
-        let comm_qst_qnt = $clidata.feedback.comp_list[comp_id].length;
-        if ($fb_prg >= comm_qst_qnt)
-            end_of_block = true;
-        else
-        {
-            next_qst_tx = $clidata.feedback.comp_list[comp_id][$fb_prg];
-            if ($clidata.feedback.lock_comp_list &&
-                $clidata.feedback.lock_comp_list[comp_id][$fb_prg])
-                next_qst_tx += "<div class='musthave'>*</div>";
-        }
-
-
-        if ($fb.comp_list.hasOwnProperty(comp_id) && $fb.comp_list[comp_id].hasOwnProperty($fb_prg) && $fb.comp_list[comp_id][$fb_prg].tx)
-            next_qst_ans = $fb.comp_list[comp_id][$fb_prg].tx;
-    }
-
-    if (end_of_block) // end of comments block
-    {
-        console.log("end of a comment block " + $clidata.fb_tag);
-        let do_finish_test = false;
-        // END THIS ALL
-        if ($clidata.fb_tag === "qz")
-            do_finish_test = true;
-        else
-        if ($clidata.fb_tag === "comp")
-        {
-            //$qsts.cur = get_next_qst_ord();
-
-            if ($qsts.cur === null) // this was the last qst
-            {
-                if (!$clidata.comm_qz_qnt) // there is no after_qz comm-qsts
-                    do_finish_test = true;
-                else
-                {
-                    // First branch - there is no last comp comments block - we roll qz block right away
-                    // Second branch - we roll comp comments block, and if there is qz_comments - we roll it right after comp, without triggering the next()
-                    roll_next = false;
-                    start_feedback("qz"); // start after_qz feedback block (right after comp feedback block)
-                    roll_answer_delay(1.5);
-                }
-            }
-        }
-
-        if (do_finish_test)
-        {
-            $(".fb_wnd").css("display","none");
-            endscreen(); //$fb_prg = "stop"; // when test is finished, it will auto-call endscreen() upon saving the feedback
-        }
-
-        //feedback_save();
-        if (!do_finish_test && roll_next)
-        {
-            $fb_prg = "comment_block_end"; // signal the end o comment block (which means current qst.cur is of next supposed question, it's not needed to find even another one after it)
-            console.log("roll_next " + roll_next, "$qsts.cur " + $qsts.cur);
-            // Hide feedback wnd and show
-            $(".fb_wnd").css("display","none");
-            next();
-            $(".qst_box").css("display","block");
-            $(".qst_cntr").css("display","block");
-            $(".hint_box").css("display","block");
-            $(".ans_box").css("display","block");
-        }
-    }
-    // Show next qst for comment (with delay)
-    else
-    {
-        roll_answer_delay(1.5);
-        $(".fb_wnd .ta_head").html(next_qst_tx); // Set new qst_tx to comment on
-        $(".fb_wnd .ta").val(next_qst_ans); // Set new qst_tx to comment on
-    }
-}
-//----------------------------------------------------------------------------------------------------------------------
-function roll_answer_delay(dur)
-{
-    // Show breakdown with grey scren for a N seconds
-    $(".mask").css("display", "block");
-    $saveans_timer = dur;
-    $saveans_countdown = true;
-    $saveans_interval = setInterval(function () {
-        answer_record_tracker();
-    }, 100);
-}
 //----------------------------------------------------------------------------------------------------------------------
 function sendAJ($tag,$data) {
     let z;
@@ -465,19 +624,17 @@ function sendAJ($tag,$data) {
                 {
                     if ($ajResponse[z].responseText)
                     {
-                        if ("yX6QU" === $qkey)
-                            $(".logo").css("display","none");
-
                         $clidata = JSON.parse($ajResponse[z].responseText);
                         $clidata.comments = {};
                         if ($clidata.hasOwnProperty('error'))
                         {
-                            next();
+                            map.start_screen();
                         }
                         else
                         {
                             //if ($clidata.presets === null)
                             //    $clidata.presets = JSON.parse(JSON.stringify($presets));
+                            map.db = duplicate($clidata.map);
 
                             $clidata.intro_tx = $clidata.intro_tx.replace(/%ФИО%/g, $clidata.resp_host);
 
@@ -492,8 +649,6 @@ function sendAJ($tag,$data) {
                                         $qsts.max++;
                                 });
                                 $qsts.tx = duplicate($clidata.qsts);
-
-                                $qsts.cur = get_next_qst_ord();
                             }
 
                             //$(".p_client .tx").html("<span class='tag'>оценивающий:</span> " + $clidata.resp_slave);
@@ -504,66 +659,23 @@ function sendAJ($tag,$data) {
                             $(".btn[action='back']")
                             .off("click")
                             .click(function(){
-                                if ($qsts.cur > 0 || null === $qsts.cur)
-                                {
-                                    if (null === $qsts.cur)
-                                        $qsts.cur = $qsts.tx.length; // as current qst as the last
-
-                                    let fb_display = $(".fb_wnd").css("display");
-                                    if (fb_display === "none" || $fb_prg === 0) // Hide feedback wnd if it was opened)
-                                    {
-                                        // On the first comment section - back to qst
-                                        if (fb_display !== "none")
-                                        {
-                                            $(".fb_wnd").css("display", "none");
-                                            $(".qst_box").css("display","block");
-                                            $(".qst_cntr").css("display","block");
-                                            $(".hint_box").css("display","block");
-                                            $(".ans_box").css("display","block");
-                                        }
-                                        $was_backed = true; // set this to correctly find
-                                        $qsts.formost = $qsts.last;
-                                        // find last valid question
-                                        for (let i=$qsts.cur-1; i>=0; i--)
-                                            if (null !== $qsts.tx[i])
-                                            {
-                                                $qsts.cur = i; // set the curr qst id to first valid qst in the list
-                                                break;
-                                            }
-
-                                        //$qsts.cur--;
-                                        next("go_back");
-                                    }
-                                    else
-                                    {
-                                        feedback_progress(-1);
-                                    }
-                                }
-                            });
-
-                            // Set events for Inputs (for the last special qst)
-                            $(".ta_most").change(function(){
-                                $clidata.comments.most =  $(".ta_most").val();
-                                $unsaved_prg = true; // every change makes the btn blimp again
-                            });
-
-                            $(".ta_least").change(function(){
-                                $clidata.comments.most =  $(".ta_least").val();
-                                $unsaved_prg = true; // every change makes the btn blimp again
+                                map.next_step("back");
                             });
 
                             bld_feedback_blocks();
                             console.log("clidata received");
                             console.log($clidata);
-                            next();
+                            map.start_screen();
+                            //map.next_step();
                         }
 
-                    } else
+                    }
+                    else
                     {
                         console.log("error to get clidata!");
                         $clidata = {};
                         $clidata.error = "Не удалось получить данные для опроса.";
-                        next();
+                        map.start_screen();
                     }
 
                 }
@@ -590,8 +702,7 @@ function sendAJ($tag,$data) {
                     if ($ajResponse[z].responseText)
                     {
                         $saveans_countdown = true;
-                        // saved successfully — moving on
-                        next();
+                        map.next_step(); // saved successfully — moving on
                         $ctrl_block = false;
                     }
                     else
@@ -639,15 +750,9 @@ function sendAJ($tag,$data) {
         })
         // -------------------------------------------------------------------------------------
             .done(function () {
-                if ($ajResponse[z].readyState === 4 && $ajResponse[z].status === 200) {
-
-                    /*
-                    if ($fb_prg === "stop")
-                    {
-                        $(".fb_wnd").css("display","none");
-                        endscreen();
-                    }
-                    */
+                if ($ajResponse[z].readyState === 4 && $ajResponse[z].status === 200)
+                {
+                    map.next_step();
                     console.log("feedback saved");
                 }
             })
@@ -747,7 +852,7 @@ function msg($action, $caller, $info)
                     .off("click")
                     .click(function(){
                         msg("hide", "report", null);
-                        next();
+                        map.next_step("no_prg");
                     });
             }
             break;
@@ -807,7 +912,7 @@ function draw_answer_options()
             }
         });
         */
-    console.log("options updated");
+    console.log("draw_answer_options called");
     $res += "</tr></table>";
     $res += "<div class='btn' action='back'>Назад</div>";
     return $res;
@@ -815,98 +920,13 @@ function draw_answer_options()
 //----------------------------------------------------------------------------------------------------------------------
 function endscreen() {
     console.log("endscreen rolled");
-    $state = 2;
-    $qsts.cur = 0;
     $(".endscreen").css("display","block");
     $(".endscreen .logo").css("display","block");
     $(".persona").css("display","none");
     $(".save_feedback").css("display","none");
 
-    $(".fb_wnd").css("display","none");
-    $(".qst_box").css("display","none");
-    $(".qst_cntr").css("display","none");
-    $(".hint_box").css("display","none");
-    $(".ans_box").css("display","none");
-    //$(".endscreen .fb_box[ord='1']").css("display","block");
-
-    //$(".qst_box").css("display","none");
-    //$(".qst_cntr").css("display","none");
-    //$(".hint_box").css("display","none");
-    //$(".ans_box").css("display","none");
-    $(".btn[action='back']").css("display","none");
-
-
-}
-//----------------------------------------------------------------------------------------------------------------------
-function get_prev_qst_id() {
-    let ord = null;
-
-    let start_from = $qsts.cur - 1;
-    if (null === $qsts.cur) // in case we finished the qz, our search start will be from the end of the quiz
-        start_from = $qsts.tx.length - 1;
-    else
-    if (start_from < 0)
-        start_from = 0;
-
-    if (start_from || start_from === 0)
-        for (let i=start_from; i>=0; i--)
-            if (null !== $qsts.tx[i]) // qst is on for this resp, resp havent answered that qst
-            {
-                ord = i;
-                break;
-            }
-    return ord;
-}
-//----------------------------------------------------------------------------------------------------------------------
-function get_next_qst_ord()
-{
-    let ord = null;
-    let q_qnt = $qsts.tx.length;
-    let local_ord = -1;
-
-    if ($was_backed) // find next valid qst
-    {
-
-        let qlist = $clidata.ans_list;
-
-
-        for (let i=0; i<q_qnt; i++) // find last unanswered qst
-        {
-            local_ord++; // get the last unanswered valid qst from the beginning of the qbook
-
-            if (null !== $qsts.tx[i] && !qlist.hasOwnProperty(local_ord)) // there is a valid qst but no answer for it
-            {
-                break;
-            }
-        }
-
-        if (null !== $qsts.cur && $qsts.cur+1 < q_qnt)
-            for (let i=$qsts.cur+1; i<q_qnt; i++)
-                if (null !== $qsts.tx[i]) // qst is on for this resp
-                {
-                    ord = i; // get the ord of next from current qst that is valid for this role
-                    break;
-                }
-
-        if (local_ord !== -1 && null !== ord && local_ord < ord)
-            ord = local_ord; // in case we skipped some valid, yet unanswered questions
-        console.log("get_next_qst_ord: local_ord: " + local_ord +"  ord: "+ ord + " qst_cur: "+ $qsts.cur);
-        //$was_backed = false;
-    }
-    else
-        for (let i=0; i<q_qnt; i++) // default, find next unanswered qst
-            if (null !== $qsts.tx[i] && [undefined,-1].indexOf($clidata.ans_list[i]) !== -1) // qst is on for this resp, resp havent answered that qst
-            {
-                ord = i;
-                break;
-            }
-
-
-    console.log("get_next_qst_ord: was_backed " + $was_backed +
-        ", local_ord " + local_ord +
-        ", ord "+ ord);
-
-    return ord;
+    map.window_set("qst", "hide");
+    map.window_set("feedback", "hide");
 }
 //----------------------------------------------------------------------------------------------------------------------
 function answer_record_tracker() {
@@ -941,316 +961,7 @@ function answer_record_tracker() {
         }
     }
 }
-//----------------------------------------------------------------------------------------------------------------------
-function next(going_back)
-{
-    if ("comment_block_end" !== $fb_prg)
-        $qsts.last = $qsts.cur; // only rewrite last when we jumped from qst to qst, not from comment section to qst
 
-    if (undefined === going_back && "comment_block_end" !== $fb_prg)
-        $qsts.cur = get_next_qst_ord();
-
-    console.log("$qsts, cur: ", $qsts.cur +", last: "+ $qsts.last +", fb_prg: "+ $fb_prg +", fb_tag: "+ $clidata.fb_tag);
-
-
-    if ($qsts.last === -1) // When we start qz not from first qst, but from first unanswered, we need an id for last valid qst ord
-        $qsts.last = get_prev_qst_id();
-
-    if ($state === "start") // test initialization
-    {
-        $state = 1;
-        $qsts.cur = -1;
-        // IMPORTANT — this sets next qst_id to first unanswered
-        $(".qst_cntr").css("display","block");
-        $(".hint_box").css("display","block");
-        next();
-    }
-    else
-    if ($state === 0) // Intro screen (or error end-screen)
-    {
-        $(".qst_box").css("display","none");
-        $(".ans_box").css("display","none");
-        $(".btn[action='back']").css("display","none");
-        if (!$clidata.hasOwnProperty('error'))
-        {
-            let $text = setIntroText();
-            $(".content").append($text);
-
-            $(".btn[action='start_qz']")
-                .off("click")
-                .click(function ()
-                {
-                    $(".qst_box").css("display", "block");
-                    $(".ans_box").css("display", "table");
-                    $(".btn[action='back']").css("display","block");
-                    $(".invite_text").css("display", "none");
-                    $(this).css("display", "none");
-                    // Сменить в заглавии Фамилию на тезис
-                    //if ($selfGrade) $(".p_host  .tx").text("Выберите насколько это утверждение верно для Вас:")
-                    next();
-                });
-            $state = "start"; // rdy to start this shit
-        }
-        // Short-end screen
-        else
-        {
-            $(".persona").css("display","none");
-            $(".qst_cntr").css("display","none");
-            $(".footer").css("display","none");
-            $(".client_body .head").css("background-color","white");
-            $(".client_body").css("background-color","white");
-            // NEW TEXT with exact reason explained
-            tx = $clidata.error;
-            $(".content").append("<div class='invite_text' style='font-size: 26px; text-align: center;'>" + tx + "</div>");
-        }
-    }
-    else
-    if ($state === 1) // Questions phase
-    {
-        // Добавить обработчик событий
-        $(".ans_line .opt").off("mouseenter").off("mouseleave")
-            .off("click")
-            .click(function()
-            {
-                let form = {};
-                form.pts = $(this).closest(".ans_line").attr("pts") * 1;
-                form.qst_ord = $qsts.cur;
-                $clidata.ans_list[form.qst_ord] = form.pts; // record answer localy so algo can detect the next unanswered qst
-                form.resp_ord = $clidata.resp_ord * 1;
-                form.group_ord = $clidata.group_ord * 1;
-                form.rkey = $rkey;
-                form.qkey = $qkey;
-                form.ans_list = $clidata.ans_list;
-
-                // ALSO - NEED TO DO BACKUP ANSWERS RECORD TO FILE !!!
-                if (!$ctrl_block)
-                {
-                    if (is_test_link) // avoid data recordings
-                    {
-                        next();
-                        $ctrl_block = false;
-                    }
-                    else
-                    {
-                        $ctrl_block = true;
-                        $unsaved_prg = true;
-                        roll_answer_delay(1);
-                        sendAJ("record_answer",JSON.stringify(form));
-                    }
-
-                }
-
-                /*
-                $(".ans_line .opt").off("mouseenter");
-                setTimeout(function () {
-                    $(".ans_line .opt")
-                        .mouseenter(function()
-                        {
-                            let opts_max_ord = $clidata.answer_opts_list.length - 1;
-                            let ord = $(this).closest("td").attr("ord") * 1;
-                            if (ord === opts_max_ord)
-                            {
-                                $(this).attr("state", 1);
-                            }
-                            else
-                            {
-                                $(".ans_line .opt").each(function () {
-                                    let his_ord = $(this).closest("td").attr("ord") * 1;
-                                    if (his_ord !== opts_max_ord)
-                                    {
-                                        if (his_ord > ord)
-                                            $(this).attr("state", 1);
-                                        else
-                                        if (his_ord === ord)
-                                            $(this).attr("state", 2);
-                                        else
-                                            $(this).attr("state", 0);
-                                    }
-                                });
-                            }
-                        })
-                }, 1000)
-                */
-            });
-
-        if (!window.mobilecheck())
-            $(".ans_line .opt")
-                .mouseenter(function()
-                {
-                    let opts_max_ord = $clidata.answer_opts_list.length - 1;
-                    let ord = $(this).closest("td").attr("ord") * 1;
-                    if (ord === opts_max_ord)
-                    {
-                        $(this).attr("state", 1);
-                    }
-                    else
-                    {
-                        $(".ans_line .opt").each(function () {
-                            let his_ord = $(this).closest("td").attr("ord") * 1;
-                            if (his_ord !== opts_max_ord)
-                            {
-                                if (his_ord > ord)
-                                    $(this).attr("state", 1);
-                                else
-                                if (his_ord === ord)
-                                    $(this).attr("state", 2);
-                                else
-                                    $(this).attr("state", 0);
-                            }
-                        });
-                    }
-
-                })
-                .mouseleave(function()
-                {
-                    let opts_max_ord = $clidata.answer_opts_list.length - 1;
-                    let ord = $(this).closest("td").attr("ord") * 1;
-                    if (ord === opts_max_ord)
-                    {
-                        $(this).attr("state", 0);
-                    }
-                    else
-                    {
-                        $(".ans_line .opt").each(function () {
-                            let his_ord = $(this).closest("td").attr("ord") * 1;
-                            if (his_ord !== opts_max_ord)
-                                $(this).attr("state", 0);
-                        });
-                    }
-                });
-        //else
-            //hoverTouchUnstick();
-
-        // Endline screen
-        if ($qsts.cur === null) // no more unanswered questions
-        {
-            console.log("end of qbook, curr: " + $qsts.cur +" last " + $qsts.last);
-            if ($qsts.last === null) // If we finished the qz and rolled next() for some reason, making the "last" = null
-                $qsts.last = get_prev_qst_id(); // we take ord of the last qst in qbook
-            console.log("new last " + $qsts.last);
-
-            let ask_comp = false; // check if there is a comment block on comp of the last qst
-
-            if (null !== $qsts.last)
-            {
-                let comp_id = $clidata.comp_id_list[$qsts.last];
-                let comm_block = $clidata.feedback.comp_list[comp_id];
-
-                if ($clidata.comm_comp_qnt && // there is comments after a competention
-                    null !== comm_block && // there comm_qsts for this particular comp
-                    comm_block.length) // -||- ^
-                    ask_comp = true;
-
-                console.log("ask_comp: " + ask_comp);
-                console.log("comm_qz_qnt: " + $clidata.comm_qz_qnt);
-            }
-
-            if (ask_comp)
-                start_feedback("comp");
-            else
-            if ($clidata.comm_qz_qnt)
-            {
-                start_feedback("qz"); // fb_prg will be set to 0 auto
-            }
-
-            else
-                endscreen();
-        }
-        else
-        // Regular qst
-        {
-            let new_fb_prg = 0;
-            let show_fb_wnd = false;
-            if (undefined === going_back) // user was not backing up from qst
-            {
-                if ($clidata.comm_comp_qnt && // there is comments after a competention
-                    $fb_prg === 0 && // only when block starts
-                    $qsts.cur-1 >= 0 && // left side limit
-                    null !== $qsts.last &&
-                    null !== $clidata.feedback.comp_list[$clidata.comp_id_list[$qsts.last]] && // there comm_qsts for this particular comp
-                    $clidata.feedback.comp_list[$clidata.comp_id_list[$qsts.last]].length && // -||- ^
-                    $clidata.comp_id_list[$qsts.cur] !== $clidata.comp_id_list[$qsts.last]) // comp_id of this and prev qsts are different, thus we traversed to next comp block of qsts
-                    show_fb_wnd = true;
-            }
-            else
-            {
-                console.log("backing commentc chk cur: " + $qsts.cur + " last: "+ $qsts.last + " formost: "+ $qsts.formost);
-                if ($clidata.comm_comp_qnt && // there is comments after a competention
-                    $fb_prg === 0 && // only when block starts
-                    null !== $qsts.formost &&
-                    null !== $clidata.feedback.comp_list[$clidata.comp_id_list[$qsts.cur]] && // there comm_qsts for this particular comp
-                    $clidata.feedback.comp_list[$clidata.comp_id_list[$qsts.cur]].length && // -||- ^
-                    $clidata.comp_id_list[$qsts.cur] !== $clidata.comp_id_list[$qsts.formost]) // comp_id of this and prev qsts are different, thus we traversed to next comp block of qsts
-                {
-                    $qsts.cur = $qsts.formost;
-                    show_fb_wnd = true;
-                    new_fb_prg = $clidata.feedback.comp_list[$clidata.comp_id_list[$qsts.last]].length - 1;
-                }
-
-                //start_feedback(section, prg)
-            }
-
-            if (show_fb_wnd)
-            {
-                if (undefined === going_back)
-                    start_feedback("comp");
-                else
-                    start_feedback("comp", new_fb_prg);
-            }
-            else
-            {
-                let local_qst_ord = 0;
-                for (let i=0; i<$qsts.tx.length; i++)
-                    if (i <= $qsts.cur && null !== $qsts.tx[i])
-                        local_qst_ord++;
-
-                if ($clidata.feedback_type === 2)
-                    $fb_prg = 0; // Reset so the next time it will trigger when competention is changed
-                $(".qst_cntr .tx")
-                    .empty()
-                    .append("Вопрос: <b>" + local_qst_ord + "/" + $qsts.max + "</b>");
-
-                $(".qst_cntr .fillbar_front")
-                    .css("width", (100 * local_qst_ord / $qsts.max) + "%");
-
-                // Special qst for certain quizes with 2 textareas
-                $(".ans_box .ans_line").css("display", "table-cell");
-                $(".ans_box textarea").css("display", "none");
-
-                $(".qst_cntr .comp_name").html("<span class='label'>Компетенция:</span> "+ $clidata.comp_names_list[$qsts.cur]);
-                $(".qst_box").html($qsts.tx[$qsts.cur]);
-
-                $(".ans_line").each(function () {
-                    $(this).find(".opt").attr("type", "0");
-                    let pts = $(this).attr("pts") * 1;
-                    if ($clidata.ans_list.hasOwnProperty($qsts.cur))
-                    {
-                        if (!pts)
-                        {
-                            if ($clidata.ans_list[$qsts.cur] === pts)
-                                $(this).find(".opt").attr("state", "1");
-                            else
-                                $(this).find(".opt").attr("state", "0");
-                        }
-                        else
-                        if (pts === $clidata.ans_list[$qsts.cur])
-                            $(this).find(".opt").attr("state", "2");
-                            //$(this).find(".opt").attr("type", "picked");
-                        else
-                        if (pts < $clidata.ans_list[$qsts.cur])
-                            $(this).find(".opt").attr("state", "1");
-                        else
-                            $(this).find(".opt").attr("state", "0");
-                    }
-
-                });
-            }
-        }
-
-        if ("comment_block_end" === $fb_prg)
-            $fb_prg = 0; // reset it's param with first next() call, neede once for a single skip of the qsts_cur step forward
-    }
-}
 //----------------------------------------------------------------------------------------------------------------------
 function save_chk()
 {
@@ -1274,7 +985,7 @@ window.mobilecheck = function() {
 //----------------------------------------------------------------------------------------------------------------------
 window.onload = function()
 {
-    localStorage.clear();
+    //localStorage.clear();
     $selfGrade = false;
     if (getUrlValue("it"))
         is_test_link = true;
@@ -1283,8 +994,6 @@ window.onload = function()
     $rkey = getUrlValue("r"); // Узнать в какой мы вкладке
     if ($qkey && $rkey && $qkey.length === 5 && $rkey.length === 5)
     {
-        $state = 0;
-        $qsts.cur = -1;
         let form = {};
         form.qkey = $qkey;
         form.rkey = $rkey;
@@ -1308,8 +1017,7 @@ window.onload = function()
     else
     {
         $clidata.error = "Ссылка не валидна.";
-        $state = 0;
-        next();
+        map.start_screen();
     }
 
 
@@ -1336,3 +1044,25 @@ function hoverTouchUnstick() {
         }
     //}
 }
+
+
+/*
+Сергей Матвеев http://evaluation.plarium.local/client.php?q=JQZQV&r=UGzyV
+
+let form = {};
+form.pts = -1;
+form.qst_ord = 0;
+form.resp_ord = 7;
+form.group_ord = 0;
+form.rkey = "UGzyV";
+form.qkey = "JQZQV";
+form.ans_list = [-1];
+$.ajax({
+    url: "http://evaluation.plarium.local/Receiver.php",
+    data: {"ajax": "record_answer", "client":true, "data":JSON.stringify(form)},
+    method: "POST",
+    cache: false
+}).done(function (data) {
+        alert("Действие прошло успешно");
+    });
+* */

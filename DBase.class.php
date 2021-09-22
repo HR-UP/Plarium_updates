@@ -18,6 +18,7 @@ define("PERSONIFY_ORDERS_LIST", "personify_orders.txt"); // backup for orders on
 define("BACKUP_ANSWERS_DIR", "answers_backup"); // backup for orders on project
 define("BACKUP_DELETED_QZS_DIR", "deleted_qz_backup"); // backup for orders on project
 define("BACKUP_QZS_BLUEPRINT", "backup_qz_blueprints"); // backup for orders on project
+define("FRESH_QZS_BACKUP_DIR", "fresh_qz_backup"); // backup for orders on project
 //define("REPORT_IMAGES_DIR", "report_images"); // backup for orders on project
 include_once "db_auth.php";
 include_once "common.php";
@@ -497,7 +498,7 @@ class DBase{
                                 $_SESSION["pers"]["focus_charges"] = intval($d[0]["focus_charges"]);
                             }
 
-                            // Load letter templates
+                            // 1) Load letter templates
                             // Create dir and get/create the file
                             if (!is_dir(LETTER_TEMPLATES_DIR))
                                 mkdir(LETTER_TEMPLATES_DIR, 0777, true);
@@ -510,6 +511,36 @@ class DBase{
                             }
                             else
                                 $_SESSION["pers"]["letemps_list"] = json_decode(file_get_contents($filename));
+
+                            // 2) Answers scheme templates
+                            $filename = LETTER_TEMPLATES_DIR ."/as_templates_" . $_SESSION["pers"]["id"] . ".txt";
+                            if (!file_exists($filename))
+                            {
+                                $_SESSION["pers"]["as_temp"] = array();
+                                file_put_contents($filename, json_encode(array()));
+                            }
+                            else
+                                $_SESSION["pers"]["as_temp"] = json_decode(file_get_contents($filename));
+
+                            // 3) Analitycs folders
+                            $filename = LETTER_TEMPLATES_DIR ."/an_folders_" . $_SESSION["pers"]["id"] . ".txt";
+                            if (!file_exists($filename))
+                            {
+                                $_SESSION["pers"]["an_folders"] = array();
+                                file_put_contents($filename, json_encode(array()));
+                            }
+                            else
+                                $_SESSION["pers"]["an_folders"] = json_decode(file_get_contents($filename));
+
+                            // 4) OQ templats folders
+                            $filename = LETTER_TEMPLATES_DIR ."/oqt_" . $_SESSION["pers"]["id"] . ".txt";
+                            if (!file_exists($filename))
+                            {
+                                $_SESSION["pers"]["oqt"] = array();
+                                file_put_contents($filename, json_encode(array()));
+                            }
+                            else
+                                $_SESSION["pers"]["oqt"] = json_decode(file_get_contents($filename));
 
 
                             if (isset($log_data['login']) && isset($log_data['pass']))
@@ -1163,10 +1194,11 @@ class DBase{
                                 // Save over
                                 if (count($letemps_list))
                                     foreach ($letemps_list as $key => $slot)
-                                        if (strtolower($slot["name"]) === strtolower($info["name"]))
+                                        if (mb_strtolower($slot["name"]) === mb_strtolower($info["name"]))
                                         {
                                             $letemps_list[$key]["tx"] = $info["tx"];
                                             $letemps_list[$key]["head"] = $info["head"];
+                                            $insert_ord = $key;
                                             break;
                                         }
 
@@ -1192,6 +1224,103 @@ class DBase{
                         $ret = false;
                     break;
                 }
+
+            case "save_as_template":
+                {
+                    if (isset($_SESSION["pers"]) && $info)
+                    {
+                        // Create dir and get/create the file
+                        if (!is_dir(LETTER_TEMPLATES_DIR))
+                            mkdir(LETTER_TEMPLATES_DIR, 0777, true);
+
+                        $filename = LETTER_TEMPLATES_DIR ."/as_templates_" . $_SESSION["pers"]["id"] . ".txt";
+                        $as_template = file_get_contents($filename);
+                        if (!$as_template)
+                            $as_template = array();
+                        else
+                            $as_template = json_decode($as_template, true);
+
+                        $info = json_decode($info, true);
+                        $insert_ord = null;
+                        // Save over
+                        if (count($as_template))
+                            foreach ($as_template as $key => $slot)
+                                if (mb_strtolower($slot["name"]) === mb_strtolower($info["name"]))
+                                {
+                                    $as_template[$key]["name"] = $info["name"];
+                                    $as_template[$key]["list"] = $info["list"];
+                                    $insert_ord = $key;
+                                    break;
+                                }
+
+                        // Save new
+                        if ($insert_ord === null)
+                        {
+                            array_push($as_template, array(
+                                "name" => $info["name"],
+                                "list" => $info["list"],
+                            ));
+                        }
+
+                        $new_list = json_encode($as_template, JSON_UNESCAPED_UNICODE); // resave new list to file
+                        file_put_contents($filename, $new_list);
+                        $ret = $new_list; // send back a new list
+
+                        $_SESSION["pers"]["as_temp"] = $as_template; // Update cookie
+                    }
+                    else
+                        $ret = false;
+                    break;
+                }
+                
+            case "save_an_folder":
+                {
+                    if (isset($_SESSION["pers"]) && $info)
+                    {
+                        // Create dir and get/create the file
+                        if (!is_dir(LETTER_TEMPLATES_DIR))
+                            mkdir(LETTER_TEMPLATES_DIR, 0777, true);
+
+                        $filename = LETTER_TEMPLATES_DIR ."/an_folders_" . $_SESSION["pers"]["id"] . ".txt";
+                        file_put_contents($filename, $info); // overwrite with new lists
+                        $an_folders = json_decode($info, true);
+                        $ret = $info; // send back a new list
+                        $_SESSION["pers"]["an_folders"] = $an_folders; // Update cookie
+                    }
+                    else
+                        $ret = false;
+                    break;
+                }
+
+            case "oqt_save":
+                {
+                    if (isset($_SESSION["pers"]) && $info)
+                    {
+                        // Create dir and get/create the file
+                        if (!is_dir(LETTER_TEMPLATES_DIR))
+                            mkdir(LETTER_TEMPLATES_DIR, 0777, true);
+
+                        $filename = LETTER_TEMPLATES_DIR ."/oqt_" . $_SESSION["pers"]["id"] . ".txt";
+                        $oqt_db = json_decode(file_get_contents($filename), true); // overwrite with new lists
+                        $new_template = json_decode($info, true);
+                        array_push($oqt_db, $new_template);
+                        $updated_oqt = json_encode($oqt_db, JSON_UNESCAPED_UNICODE);
+                        file_put_contents($filename, $updated_oqt);
+                        /*
+                        $new_temp_ord = null;
+                        if (count($oqt_db))
+                            foreach ($oqt_db as $temp)
+                        */
+
+                        $ret = $updated_oqt; // send back a new list
+                        $_SESSION["pers"]["oqt"] = $oqt_db; // Update session data
+                    }
+                    else
+                        $ret = false;
+                    break;
+                }
+
+                
 
             case "personify_mail":
                 {
@@ -1605,7 +1734,19 @@ class DBase{
                             $bro["settings"] = true_json_code($bro["settings"], "decode");
                             $bro["status"] *= 1;
                             $pers_id = $bro["madeby"]*1;
-                            array_push($qz_list, $bro);
+
+
+                            $found = false;
+                            foreach ($bro["resps"] as $gr_ord => $group)
+                                foreach ($group as $ord => $resp_data)
+                                    if ($resp_data["ukey"] === $d->rkey)
+                                    {
+                                        $found = true;
+                                        break;
+                                    }
+
+                            if ($found)
+                                array_push($qz_list, $bro);
                         };
 
                         file_put_contents($file, " \n qz_list count: ". count($qz_list), FILE_APPEND);
@@ -1623,189 +1764,374 @@ class DBase{
                                 $ans["error"] = "Опрос уже завершен.";
                             elseif ($sett["end_date"] < time())
                                 $ans["error"] = "Время прохождения опроса истекло. Опрос был завершен: " . date("d-m-y H:i:s", $sett["end_date"]);
+                            elseif (isset($sett["is_muted"]) && 1 === $sett["is_muted"] * 1)
+                            {
+                                $ans["error"] = "Опрос временно приостановлен.";
+                                if ($sett["is_muted_tx"])
+                                    $ans["error"] .= "<br>Комментарий: <span style='font-style: italic; '>" . $sett["is_muted_tx"] . "</span>";
+                            }
                             else
                             {
 
                                 $QBOOKS = $this->qbook("list", "no_recon", $pers_id);
                                 // question($action, $info=false, $recon = true, $madeby_id = null)
-                                $this->question("list", false, false, $pers_id);
+                                $this->question("list", false, false, $pers_id); // refreshes  qsts db, sets into the session
                                 $QSTS = $_SESSION['qsts'];
                                 // Get all comp names+id's for our qst_list
 
                                 $resp = null;
                                 $resp["ord"] = null;
-
                                 foreach ($qz["resps"] as $gr_ord => $group)
-                                {
                                     foreach ($group as $ord => $resp_data)
                                         if ($resp_data["ukey"] === $d->rkey)
                                         {
                                             $resp = $resp_data;
-                                            $resp["ord"] = $ord;
-                                            $ans["resp_ord"] = $ord;
-                                            $ans["group_ord"] = $gr_ord;
-                                            $ans["fb_log"] = $resp_data["feedback"];
-                                            $ans["feedback"] = $sett["comm_groups"][$gr_ord];
-                                            $resp["host_id"] = $group[0]["id"] * 1;
+                                            break;
+                                            break;
+                                        }
 
-                                            // Add backup info to resp's slot
-                                            $filename = BACKUP_ANSWERS_DIR . "/q_". $qz["qkey"] ."_r_". $resp_data["ukey"] . ".txt";
-                                            if (file_exists($filename))
+                                if (null === $resp)
+                                    $ans["error"] = "Не найден id респондента.";
+                                else
+                                {
+                                    $resp["ord"] = $ord;
+                                    $ans["resp_ord"] = $ord;
+                                    $ans["group_ord"] = $gr_ord;
+                                    $ans["fb_log"] = $resp_data["feedback"];
+                                    if (isset($resp["map_step"]))
+                                        $ans["map_step"] = $resp["map_step"];
+
+                                    //else
+                                    //    $ans["map_step"] = null;
+                                    $ans["feedback"] = $sett["comm_groups"][$gr_ord];
+
+                                    $fb = $ans["feedback"];
+                                    $cid = $resp["cat_id"] * 1;
+                                    $map_qz_after_block = array();
+                                    // Rewrite specialized comments AFTER QZ
+                                    if ($fb["qz_after"] && isset($fb["qz_cats_list"]))
+                                    {
+                                        $resulting_list = array();
+                                        if (isset($fb["qz_list"]) && count($fb["qz_list"]))
+                                            foreach ($fb["qz_list"] as $i => $qz_comment)
                                             {
-                                                $backup = json_decode(file_get_contents($filename),true);
-                                                if ($backup && isset($backup["ans_list"]))
+                                                if (isset($fb["qz_cats_list"]) &&
+                                                    isset($fb["qz_cats_list"][$i]) &&
+                                                    isset($fb["qz_cats_list"][$i][$cid]) &&
+                                                    isset($fb["qz_cats_list"][$i][$cid]["is_on"])
+                                                )
                                                 {
-                                                    $backup_list = $backup["ans_list"];
+                                                    if ($fb["qz_cats_list"][$i][$cid]["is_on"]*1)  // comment is disabled for this role
+                                                    {
+                                                        $map_slot = array(
+                                                            "type" => "comment",
+                                                            "subtype" => "qz",
+                                                            "ord" => count($resulting_list)
+                                                        );
+                                                        array_push($map_qz_after_block, $map_slot);
+                                                        if ($fb["qz_cats_list"][$i][$cid]["tx"]) // swap desc to role-specific
+                                                        {
+                                                            $new_dec_comment = $fb["qz_cats_list"][$i][$cid]["tx"];
+                                                            array_push($resulting_list, $new_dec_comment);
+                                                        }
+                                                    }
+                                                }
+                                                else
+                                                    array_push($resulting_list, $qz_comment);
+                                            }
 
-                                                    // Restore every missed non-empty answer
-                                                    if (isset($resp["ans_list"]) && count($resp["ans_list"]))
-                                                        foreach ($resp["ans_list"] as $ind =>  &$ans_val)
-                                                            if (-1 === intval($ans_val) && null !== $backup_list[$ind])
-                                                                $ans_val = $backup_list[$ind];
+                                        if (count($resulting_list))
+                                            $fb["qz_list"] = $resulting_list; // overwrite filtered list
+                                    }
+                                    //$ans["map_qz_after_block"] = $map_qz_after_block;
+
+                                    $map_comps_block = array(); // key is comp_id, in it array of qsts
+                                    // Rewrite specialized comments
+                                    if ($fb["comp_after"] && isset($fb["comp_cats_list"]))
+                                        foreach ($fb["comp_list"] as $comp_id => $comp)
+                                            if ($comp && is_array($comp) && count($comp))
+                                            {
+                                                $resulting_list = array();
+                                                $comp_cat_slot_exists = false;
+                                                if (isset($fb["comp_cats_list"]) &&
+                                                    isset($fb["comp_cats_list"][$comp_id])
+                                                )
+                                                {
+                                                    $comp_cat_slot_exists = true;
+                                                }
+
+
+                                                foreach ($comp as $i => $comp_comment)
+                                                {
+                                                    if ($comp_cat_slot_exists &&
+                                                        isset($fb["comp_cats_list"][$comp_id][$i]) &&
+                                                        isset($fb["comp_cats_list"][$comp_id][$i][$cid]) &&
+                                                        isset($fb["comp_cats_list"][$comp_id][$i][$cid]["is_on"])
+                                                    )
+                                                    {
+                                                        $comp_cat_slot = $fb["comp_cats_list"][$comp_id][$i][$cid];
+                                                        if (1 === $comp_cat_slot["is_on"]*1) // comment is disabled for this role
+                                                        {
+                                                            // Fill competentions slot
+                                                            if (!isset($map_comps_block[$comp_id]))
+                                                                $map_comps_block[$comp_id] = array();
+
+                                                            $map_slot = array(
+                                                                "type" => "comment",
+                                                                "subtype" => "comp",
+                                                                "comp_id" => $comp_id,
+                                                                "ord" => count($resulting_list)
+                                                            );
+                                                            array_push($map_comps_block[$comp_id], $map_slot);
+
+                                                            if ($comp_cat_slot["tx"]) // swap desc to role-specific
+                                                            {
+                                                                $new_dec_comment = $comp_cat_slot["tx"];
+                                                                array_push($resulting_list, $new_dec_comment);
+                                                            }
+                                                        }
+                                                    }
+                                                    else
+                                                        array_push($resulting_list, $comp_comment);
+                                                }
+
+                                                if (count($resulting_list))
+                                                    $fb["comp_list"][$comp_id] = $resulting_list; // overwrite filtered list
+                                            }
+
+                                    //$ans["map_comps_block"] = $map_comps_block;
+
+                                    $ans["feedback"] = $fb; // return all the changes here
+                                    $resp["host_id"] = $group[0]["id"] * 1;
+
+                                    // Add backup info to resp's slot
+
+
+                                    $filename = BACKUP_ANSWERS_DIR . "/q_". $qz["qkey"] ."_r_". $resp_data["ukey"] . ".txt";
+                                    if (file_exists($filename))
+                                    {
+                                        $backup = json_decode(file_get_contents($filename),true);
+                                        if ($backup && isset($backup["ans_list"]))
+                                        {
+                                            $backup_list = $backup["ans_list"];
+
+                                            // Restore every missed non-empty answer
+                                            if (isset($resp["ans_list"]) && count($resp["ans_list"]))
+                                                foreach ($resp["ans_list"] as $ind =>  &$ans_val)
+                                                    if (-1 === intval($ans_val) && null !== $backup_list[$ind])
+                                                        $ans_val = $backup_list[$ind];
+                                        }
+                                    }
+
+                                    // Slot to check progress of resp
+                                    $chk_slot = [];
+                                    $chk_slot["resps"] = $qz["resps"];
+                                    $chk_slot["settings"] = $qz["settings"];
+                                    $chk_slot["gr_ord"] = $ans["group_ord"];
+                                    $chk_slot["resp_ord"] = $ans["resp_ord"];
+
+                                    $qb_pct_done = resp_pct_done($chk_slot, $QBOOKS);
+                                    $fb_done = resp_fb_done($chk_slot, $QBOOKS, $QSTS);
+
+                                    $ans["fb_done_chk"] = 0;
+                                    if ($fb_done) // manually disable further comment attempts
+                                        $ans["fb_done_chk"] = 1;
+
+
+                                    $is_finished_trough = true;
+                                    if (isset($resp["map_len"]) &&
+                                        isset($resp["map_step"]) &&
+                                        $resp["map_step"]*1 < $resp["map_len"]*1
+                                    )
+                                        $is_finished_trough = false;
+
+
+                                    if ($qb_pct_done >= 1 && $fb_done && $is_finished_trough)
+                                        $ans["error"] = "Опрос Вами успешно заполнен.";
+                                    else
+                                    {
+                                        $cat_id = $resp["cat_id"] * 1;
+                                        $ans["ans_list"] = $resp["ans_list"];
+                                        $ans["map"] = array();
+
+                                        // Get self info
+                                        $z = $this->send_query("SELECT fio FROM resp WHERE id = '". $resp["id"] ."'");
+                                        $resp_data = $z->fetch(PDO::FETCH_ASSOC);
+                                        $ans["resp_slave"] = $resp_data["fio"];
+                                        // Get focus-resp info
+                                        // self
+                                        if (!$cat_id)
+                                        {
+                                            $ans["resp_host"] = $resp_data["fio"];
+                                            $ans["intro_tx"] = $sett["intro_tx"]["self"];
+                                            if (!$ans["intro_tx"])
+                                                $ans["intro_tx"] = "Уважаемый коллега!<br><br>" .
+                                                    "Перед Вами – опрос 360 градусов. Пожалуйста, ответьте на вопросы о самом себе, Ваших деловых качествах и управленческом стиле<br>" .
+                                                    "Задача проведения данной части опроса – обеспечить сравнение Вашей самооценки с тем, как Вас видят окружающие. " .
+                                                    "Впоследствии это поможет Вам глубже проанализировать Ваши сильные стороны и зоны развития. Постарайтесь давать максимально правдивые ответы.<br><br>" .
+                                                    "Правила заполнения опроса: <br>" .
+                                                    "Опросник состоит из нескольких вопросов. По каждому вопросу Вам будут предложены варианты ответов. " .
+                                                    "Вам необходимо выбрать один вариант и нажать на него один раз. " .
+                                                    "После этого будет автоматически осуществлен переход к другому вопросу (дождитесь перехода системы к следующему вопросу).<br>" .
+                                                    "В конце опроса Вам будет предложено вписать от себя некоторые комментарии.<br>" .
+                                                    "По завершении опроса нажмите кнопку «сохранить» в верхней части экрана слева.";
+                                        }
+                                        // other guy
+                                        else
+                                        {
+                                            $z = $this->send_query("SELECT fio FROM resp WHERE id = '". $resp["host_id"] ."'");
+                                            $resp_data = $z->fetch(PDO::FETCH_ASSOC);
+                                            $ans["resp_host"] = $resp_data["fio"];
+                                            $ans["intro_tx"] = $sett["intro_tx"]["env"];
+                                            if (!$ans["intro_tx"])
+                                                $ans["intro_tx"] = "Уважаемый коллега!<br><br>" .
+                                                    "Перед Вами – опрос 360 градусов. Просим Вас ответить на предлагаемые вопросы, касающиеся делового и управленческого стиля %ФИО%.<br>" .
+                                                    "Задача проведения опроса – обеспечить максимально качественную и объективную обратную связь. Опросник анонимен. При обработке результатов опроса Ваше имя и фамилия фиксироваться не будут. " .
+                                                    "Важно максимально точное отражение Вашего мнения.<br> " .
+                                                    "Правила заполнения опроса: <br>" .
+                                                    "Опросник состоит из нескольких вопросов. По каждому вопросу Вам будут предложены варианты ответов. Вам необходимо выбрать один вариант и нажать на него один раз. " .
+                                                    "После этого будет автоматически осуществлен переход к другому вопросу (дождитесь перехода системы к следующему вопросу).<br>" .
+                                                    "В конце опроса Вам будет предложено вписать от себя некоторые комментарии.<br><br>" .
+                                                    "По завершении опроса нажмите кнопку «сохранить» в верхней части экрана слева.";
+                                        }
+
+
+                                        $qb_id = $ans["feedback"]["qb_id"] * 1;
+                                        foreach ($QBOOKS as $ordz => $qb)
+                                            if ($qb["id"]*1 === $qb_id*1)
+                                            {
+                                                $qb_ord = $ordz;
+                                                break;
+                                            }
+
+                                        //$qb_ord = get_qb_ord_from_qb_id($qb_id); // this creates session['qbooks'] if needed
+                                        //$qb = $_SESSION["qbooks"][$qb_ord];
+                                        $qb = $QBOOKS[$qb_ord];
+                                        $qst_list = $qb["list"];
+                                        $struct = $qb["struct"];
+
+                                        file_put_contents($file, " \n qkey: ". $d->qkey .
+                                            " \n rkey: ". $d->rkey .
+                                            " \n pers_id: ". $pers_id .
+                                            " \n qbooks: ". json_encode($QBOOKS) .
+                                            " \n qb_id: $qb_id ".
+                                            " \n qb_ord: $qb_ord ".
+                                            " \n qst_list:" . implode(",", $qst_list), FILE_APPEND);
+
+                                        $ans["qsts"] = array();
+                                        $qst_global_ord = -1;
+
+                                        $unique_comp_id_list = array(); // get the list of all "blue" comps
+                                        $ans["comp_id_list"] = array();
+                                        $trans = $this->_db->prepare("SELECT tx, comp_id FROM qsts WHERE id = ? ");
+                                        $qst_qnt = count($qst_list);
+                                        foreach ($qst_list as $ord => $qst_id)
+                                        {
+                                            $qst_global_ord++;
+                                            $trans->execute(array($qst_id));
+                                            $q_data = $trans->fetch(PDO::FETCH_ASSOC);
+                                            $comp_id = $q_data["comp_id"]*1;
+                                            $qst_tx = $q_data["tx"];
+                                            array_push($ans["comp_id_list"], $comp_id);
+
+                                            if (!in_array($comp_id, $unique_comp_id_list))
+                                            {
+                                                array_push($unique_comp_id_list, $comp_id);
+                                                $comps_qnt = count($unique_comp_id_list);
+
+                                                // Fill MAP with comments from prev comp, if any are present+enabled
+                                                if ($comps_qnt > 1)
+                                                {
+                                                    $prev_comp_id = $unique_comp_id_list[$comps_qnt - 2];
+                                                    // There is comments after this comp
+                                                    if (isset($map_comps_block[$prev_comp_id]))
+                                                        foreach ($map_comps_block[$prev_comp_id] as $slot)
+                                                            array_push($ans["map"], $slot);
                                                 }
                                             }
 
-                                            break;
+                                            // Chk if alternative tx is applied for this category
+                                            if ($struct && $struct["q_list"][$qst_id]["cats"][$cat_id]["is_on"])
+                                            {
+
+                                                $map_slot = array(
+                                                    "type" => "qst",
+                                                    "ord" => $qst_global_ord,
+                                                    "comp_id" => $comp_id,
+                                                );
+                                                array_push($ans["map"], $map_slot);
+
+                                                if ($struct["q_list"][$qst_id]["cats"][$cat_id]["tx"])
+                                                    $qst_tx = $struct["q_list"][$qst_id]["cats"][$cat_id]["tx"]; // alternative tx
+                                            }
+                                            else
+                                                $qst_tx = null;
+                                            array_push($ans["qsts"], $qst_tx);
+
+                                            // That was last question
+                                            if ($qst_qnt === $ord + 1)
+                                            {
+                                                // There is comments after this comp
+                                                if (isset($map_comps_block[$comp_id]))
+                                                    foreach ($map_comps_block[$comp_id] as $slot)
+                                                        array_push($ans["map"], $slot);
+                                            }
                                         }
-                                    if ($resp_data["ukey"] === $d->rkey)
-                                        break;
-                                }
+                                        unset($trans);
 
-                                // Slot to check progress of resp
-                                $chk_slot = [];
-                                $chk_slot["resps"] = $qz["resps"];
-                                $chk_slot["settings"] = $qz["settings"];
-                                $chk_slot["gr_ord"] = $ans["group_ord"];
-                                $chk_slot["resp_ord"] = $ans["resp_ord"];
+                                        //$ans["unique_comp_id_list"] = $unique_comp_id_list;
 
-                                $qb_pct_done = resp_pct_done($chk_slot, $QBOOKS);
-                                $fb_done = resp_fb_done($chk_slot, $QBOOKS, $QSTS);;
+                                        // Fill all the "red" comps comments if there is any
+                                        foreach ($map_comps_block as $comp_id => $list)
+                                            if (!in_array($comp_id*1, $unique_comp_id_list)) // is a "red" comp, id of which absent in qst-related comps
+                                                foreach ($list as $slot)
+                                                    array_push($ans["map"], $slot);
 
-                                if ($resp["ord"] === null)
-                                    $ans["error"] = "Нет такого респондента в опросе.";
-                                elseif ($qb_pct_done >= 1 && $fb_done)
-                                    $ans["error"] = "Опрос Вами успешно заполнен.";
-                                else
-                                {
-                                    $cat_id = $resp["cat_id"] * 1;
-                                    $ans["ans_list"] = $resp["ans_list"];
+                                        // Fill all the after_qz comments
+                                        if (count($map_qz_after_block))
+                                            foreach ($map_qz_after_block as $slot)
+                                                array_push($ans["map"], $slot);
 
-
-                                    // Get self info
-                                    $z = $this->send_query("SELECT fio FROM resp WHERE id = '". $resp["id"] ."'");
-                                    $resp_data = $z->fetch(PDO::FETCH_ASSOC);
-                                    $ans["resp_slave"] = $resp_data["fio"];
-                                    // Get focus-resp info
-                                    // self
-                                    if (!$cat_id)
-                                    {
-                                        $ans["resp_host"] = $resp_data["fio"];
-                                        $ans["intro_tx"] = $sett["intro_tx"]["self"];
-                                        if (!$ans["intro_tx"])
-                                            $ans["intro_tx"] = "Уважаемый коллега!<br><br>" .
-                                                "Перед Вами – опрос 360 градусов. Пожалуйста, ответьте на вопросы о самом себе, Ваших деловых качествах и управленческом стиле<br>" .
-                                                "Задача проведения данной части опроса – обеспечить сравнение Вашей самооценки с тем, как Вас видят окружающие. " .
-                                                "Впоследствии это поможет Вам глубже проанализировать Ваши сильные стороны и зоны развития. Постарайтесь давать максимально правдивые ответы.<br><br>" .
-                                                "Правила заполнения опроса: <br>" .
-                                                "Опросник состоит из нескольких вопросов. По каждому вопросу Вам будут предложены варианты ответов. " .
-                                                "Вам необходимо выбрать один вариант и нажать на него один раз. " .
-                                                "После этого будет автоматически осуществлен переход к другому вопросу (дождитесь перехода системы к следующему вопросу).<br>" .
-                                                "В конце опроса Вам будет предложено вписать от себя некоторые комментарии.<br>" .
-                                                "По завершении опроса нажмите кнопку «сохранить» в верхней части экрана слева.";
-                                    }
-                                    // other guy
-                                    else
-                                    {
-                                        $z = $this->send_query("SELECT fio FROM resp WHERE id = '". $resp["host_id"] ."'");
-                                        $resp_data = $z->fetch(PDO::FETCH_ASSOC);
-                                        $ans["resp_host"] = $resp_data["fio"];
-                                        $ans["intro_tx"] = $sett["intro_tx"]["env"];
-                                        if (!$ans["intro_tx"])
-                                            $ans["intro_tx"] = "Уважаемый коллега!<br><br>" .
-                                                "Перед Вами – опрос 360 градусов. Просим Вас ответить на предлагаемые вопросы, касающиеся делового и управленческого стиля %ФИО%.<br>" .
-                                                "Задача проведения опроса – обеспечить максимально качественную и объективную обратную связь. Опросник анонимен. При обработке результатов опроса Ваше имя и фамилия фиксироваться не будут. " .
-                                                "Важно максимально точное отражение Вашего мнения.<br> " .
-                                                "Правила заполнения опроса: <br>" .
-                                                "Опросник состоит из нескольких вопросов. По каждому вопросу Вам будут предложены варианты ответов. Вам необходимо выбрать один вариант и нажать на него один раз. " .
-                                                "После этого будет автоматически осуществлен переход к другому вопросу (дождитесь перехода системы к следующему вопросу).<br>" .
-                                                "В конце опроса Вам будет предложено вписать от себя некоторые комментарии.<br><br>" .
-                                                "По завершении опроса нажмите кнопку «сохранить» в верхней части экрана слева.";
-                                    }
-
-
-
-                                    $qb_id = $ans["feedback"]["qb_id"] * 1;
-                                    foreach ($QBOOKS as $ordz => $qb)
-                                        if ($qb["id"]*1 === $qb_id*1)
+                                        // Replace comp_id with proper names
+                                        $ans["comp_names_list"] = array();
+                                        $trans = $this->_db->prepare("SELECT name FROM comp WHERE id = ? ");
+                                        foreach ($ans["comp_id_list"] as $ord => $comp_id)
                                         {
-                                            file_put_contents("0_qb_qnt.txt", "qb_order: $ordz");
-                                            $qb_ord = $ordz;
-                                            break;
+                                            $trans->execute(array($comp_id));
+                                            $cmp_data = $trans->fetch(PDO::FETCH_ASSOC);
+                                            $ans["comp_names_list"][$ord] = $cmp_data["name"];
                                         }
+                                        unset($trans);
 
+                                        // Get names for all comps of comment sections
+                                        $trans = $this->_db->prepare("SELECT name FROM comp WHERE id = ? ");
+                                        foreach ($ans["map"] as &$slot)
+                                            if ("comment" === $slot["type"] &&
+                                                "comp" === $slot["subtype"]
+                                            )
+                                            {
+                                                $trans->execute(array($slot["comp_id"]));
+                                                $cmp_data = $trans->fetch(PDO::FETCH_ASSOC);
+                                                $slot["name"] = $cmp_data["name"];
+                                            }
+                                        unset($trans);
 
-                                    //$qb_ord = get_qb_ord_from_qb_id($qb_id); // this creates session['qbooks'] if needed
-                                    //$qb = $_SESSION["qbooks"][$qb_ord];
-                                    $qb = $QBOOKS[$qb_ord];
-                                    $qst_list = $qb["list"];
-                                    $struct = $qb["struct"];
+                                        /* and so we have
+                                        ["answer_opts_list"]
+                                        ["resp_slave"]
+                                        ["resp_host"]
+                                        ["qsts"]
+                                        ["feedback"]
+                                        ["intro_tx"]
+                                        ["answer_set"]
+                                        ["ans_list"]
+                                        ["comp_names_list"]
+                                        ["comp_id_list"]
+                                        ["error"]
+                                        */
 
-                                    file_put_contents($file, " \n qkey: ". $d->qkey .
-                                        " \n rkey: ". $d->rkey .
-                                        " \n pers_id: ". $pers_id .
-                                        " \n qbooks: ". json_encode($QBOOKS) .
-                                        " \n qb_id: $qb_id ".
-                                        " \n qb_ord: $qb_ord ".
-                                        " \n qst_list:" . implode(",", $qst_list), FILE_APPEND);
-
-                                    $ans["qsts"] = array();
-
-                                    $ans["comp_id_list"] = array();
-                                    $trans = $this->_db->prepare("SELECT tx, comp_id FROM qsts WHERE id = ? ");
-                                    foreach ($qst_list as $ord => $qst_id)
-                                    {
-                                        $trans->execute(array($qst_id));
-                                        $q_data = $trans->fetch(PDO::FETCH_ASSOC);
-                                        $qst_tx = $q_data["tx"];
-                                        array_push($ans["comp_id_list"], $q_data["comp_id"]*1);
-
-                                        // Chk if alternative tx is applied for this category
-                                        if ($struct && $struct["q_list"][$qst_id]["cats"][$cat_id]["is_on"])
-                                        {
-                                            if ($struct["q_list"][$qst_id]["cats"][$cat_id]["tx"])
-                                                $qst_tx = $struct["q_list"][$qst_id]["cats"][$cat_id]["tx"]; // alternative tx
-                                        }
-                                        else
-                                            $qst_tx = null;
-                                        array_push($ans["qsts"], $qst_tx);
+                                        file_put_contents($file, "\n ans[qsts]: " . json_encode($ans["qsts"], JSON_UNESCAPED_UNICODE), FILE_APPEND);
                                     }
-                                    unset($trans);
-
-                                    // Replace comp_id with proper names
-                                    $ans["comp_names_list"] = array();
-                                    $trans = $this->_db->prepare("SELECT name FROM comp WHERE id = ? ");
-                                    foreach ($ans["comp_id_list"] as $ord => $comp_id)
-                                    {
-                                        $trans->execute(array($comp_id));
-                                        $cmp_data = $trans->fetch(PDO::FETCH_ASSOC);
-                                        $ans["comp_names_list"][$ord] = $cmp_data["name"];
-                                    }
-                                    unset($trans);
-                                    /* and so we have
-                                    ["answer_opts_list"]
-                                    ["resp_slave"]
-                                    ["resp_host"]
-                                    ["qsts"]
-                                    ["feedback"]
-                                    ["intro_tx"]
-                                    ["answer_set"]
-                                    ["ans_list"]
-                                    ["comp_names_list"]
-                                    ["comp_id_list"]
-                                    ["error"]
-                                    */
-
-                                    file_put_contents($file, "\n ans[qsts]: " . json_encode($ans["qsts"], JSON_UNESCAPED_UNICODE), FILE_APPEND);
                                 }
                             }
                         }
@@ -1819,7 +2145,6 @@ class DBase{
 
             case "record_answer":
                 {
-
                     $d = json_decode($info);
 
                     // BACKUP ANSWERS SAVE
@@ -1868,11 +2193,16 @@ class DBase{
 
                             // Record the currents answer
                             $resp = &$resps[$d->group_ord][$d->resp_ord];
+                            if (isset($d->map_step))
+                                $resp["map_step"] = $d->map_step;
+                            if (isset($d->map_len))
+                                $resp["map_len"] = $d->map_len;
                             //$resp["ans_list"] = $d->ans_list; // fully rewrite results
                             $resp["ans_list"][$d->qst_ord] = $d->pts; // record user answer value
                             for ($i=0; $i<count($resp["ans_list"]); $i++)
                                 if (null === $resp["ans_list"][$i])
                                     $resp["ans_list"][$i] = -1; // absent answer, cuz it's blocked for this resp's category (or for other reasons)
+
 
                             $qz_status = 1; // Detect if quiz is finished (expired and/or completed) or not
                             $chk_slot = []; // Slot to check progress of resp
@@ -1898,6 +2228,7 @@ class DBase{
                                     if (!$qz_status)
                                         break;
                                 }
+                            //else $ans = "expired";
 
                             $proper_array = []; // when array saves value at indexes not in strict order, it becomes assoc type, we redo it to index type by this
                             for ($i=0; $i<count($resp["ans_list"]); $i++)
@@ -1924,6 +2255,7 @@ class DBase{
                     // BACKUP ANSWERS SAVE
                     if (!is_dir(BACKUP_ANSWERS_DIR))
                         mkdir(BACKUP_ANSWERS_DIR, 0777, true);
+                    //http://evaluation.plarium.local/answers_backup/feedback_q_QWwyt_r_CadoG.txt
                     file_put_contents(BACKUP_ANSWERS_DIR . "/feedback_q_". $d->qkey ."_r_".$d->rkey .".txt", json_encode($d->feedback, JSON_UNESCAPED_UNICODE));
 
                     $q = $this->send_query("SELECT resps FROM quiz WHERE qkey = '". $d->qkey ."'");
@@ -1938,6 +2270,10 @@ class DBase{
                             $resp = &$resps[$d->group_ord][$d->resp_ord];
                             $resp["feedback"] = $d->feedback; // record user feedback answers
                             $resp["last_upd"] = time();
+                            if (isset($d->map_step))
+                                $resp["map_step"] = $d->map_step;
+                            if (isset($d->map_len))
+                                $resp["map_len"] = $d->map_len;
                             $resps = true_json_code($resps); // proper encode json
 
                             // Update info in DB
@@ -2809,6 +3145,7 @@ class DBase{
 //>>>>--------->>>>--------->>>>---------->>>>---------->>>>----------->>>>------------>>>>------------>>>>------->>>>--
     function qbook($action,$mode=false,$alter_pid=false){
         $owner_id = $_SESSION['pers']["id"];
+
         if ($action === "list"){
             if ("no_recon" !== $mode)
                 $this->DB_conn();
@@ -2821,6 +3158,7 @@ class DBase{
                 $stack = array();
 
             $cond = $this->set_select_cond($owner_id, false, $alter_pid);
+            $new_indexes_list = array();
 
             if ($alter_pid)
                 file_put_contents("resp_rec_chk.txt", "\n qbook condition $cond" , FILE_APPEND);
@@ -2838,11 +3176,47 @@ class DBase{
                     $v = str_replace("♀", "\\", $bro["struct"]);
                     $bro["struct"] = json_decode($v, true);
                     foreach ($bro["struct"]["c_list"] as $i => $comp)
-                        if (isset($bro["struct"]["c_list"][$i]["targ_avg"]) && 0 === $bro["struct"]["c_list"][$i]["targ_avg"])
+                        if (isset($bro["struct"]["c_list"][$i]["targ_avg"]) &&
+                            0 === $bro["struct"]["c_list"][$i]["targ_avg"])
                             $bro["struct"]["c_list"][$i]["targ_avg"] = null;
+
+                    // Update to a new category
+                    foreach ($bro["struct"]["q_list"] as $i => $qst)
+                        if (isset($qst["cats"]) && !$qst["cats"][1])
+                        {
+                            $bro["struct"]["q_list"][$i]["cats"][1] = array(
+                                "tx" => "",
+                                "is_on" => 0
+                            );
+                        }
                 }
                 else
                     $bro["struct"] = "";
+
+                // Reformat lay name into an array
+                if (strlen($bro["lay_name"]) < 5)
+                {
+                    // We give for each ID of each layer a one-timed indexation of qbooks [0+]
+                    if (!isset($new_indexes_list[$bro["lay_name"]]))
+                        $new_indexes_list[$bro["lay_name"]] = [];
+                    if (!isset($new_indexes_list[$bro["lay_name"]][$bro["lay_id"]]))
+                        $new_indexes_list[$bro["lay_name"]][$bro["lay_id"]] = -1;
+
+                    $new_indexes_list[$bro["lay_name"]][$bro["lay_id"]]++;
+                    $current_index_of_layer = $new_indexes_list[$bro["lay_name"]][$bro["lay_id"]];
+
+                    $bro["meta"] = array();
+                    $bro["meta"]["lay_name"] = $bro["lay_name"];
+                    $bro["meta"]["lay_ind"] = $current_index_of_layer;
+                    $new_layout = json_encode($bro["meta"]);
+                    $this->send_query("UPDATE qbook SET lay_name = '$new_layout' WHERE id = " . $bro["id"]);
+                }
+                else
+                {
+                    $bro["meta"] = json_decode($bro["lay_name"], true);
+                    $bro["lay_name"] = $bro["meta"]["lay_name"];
+                }
+
                 array_push($stack, $bro);
             }
 
@@ -2856,6 +3230,7 @@ class DBase{
             else
                 return $stack;
         }
+
         elseif ($action === "new")
         {
             $this->DB_conn();
@@ -2868,8 +3243,10 @@ class DBase{
                 $d["struct"] = "";
             if (!isset($d["lay_id"]))
                 $d["lay_id"] = 0;
-            if (!isset($d["lay_name"]))
-                $d["lay_name"] = "";
+
+            //$d["lay_name"] = json_encode($d["meta"]);
+
+
 
             // make a query of params
             $q_params = "";
@@ -2882,7 +3259,13 @@ class DBase{
                     $q_params .= $key . " = " . ($val * 1);
                     $ord++;
                 }
-                elseif (in_array($key, array("name","lay_name")))
+                elseif (in_array($key, array("lay_name")))
+                {
+                    ($ord > 0) ? $q_params .= ", " : false;
+                    $q_params .= $key . " = '". json_encode($d["meta"]) ."'";
+                    $ord++;
+                }
+                elseif (in_array($key, array("name")))
                 {
                     ($ord > 0) ? $q_params .= ", " : false;
                     $q_params .= $key . " = '$val'";
@@ -2915,7 +3298,7 @@ class DBase{
         elseif ($action === "save")
         {
             $this->DB_conn();
-            $d = json_decode($_POST["data"], "true");
+            $d = json_decode($_POST["data"], true);
             $d["ud"] = time();
             $qb = &$_SESSION["qbooks"][$d["qb_ord"]];
 
@@ -2931,8 +3314,16 @@ class DBase{
                     $q_params .= $key . " = " . $qb[$key];
                     $ord++;
                 }
-                elseif (in_array($key, array("name","lay_name")))
+                elseif (in_array($key, array("lay_name")))
                 {
+                    ($ord > 0) ? $q_params .= ", " : false;
+                    $q_params .= $key . " = '". json_encode($d["meta"]) ."'";
+                    $ord++;
+                }
+                elseif (in_array($key, array("name")))
+                {
+                    if (( "lay_name") === $key)
+                        $val = json_encode($val);
                     ($ord > 0) ? $q_params .= ", " : false;
                     $q_params .= $key . " = '$val'";
                     $ord++;
@@ -2958,13 +3349,28 @@ class DBase{
             return json_encode($qb);
         }
 
-        elseif ($action === "delete"){
+        elseif ($action === "swap_index")
+        {
             $this->DB_conn();
-            $qbook_iid = $this->Purify($_POST['iid'], "int");
-            $qbook_oid = $_SESSION["qbooks"][$qbook_iid][3];
-            $this->send_query("DELETE FROM qbook WHERE id = '$qbook_oid' ");
+            $d = json_decode($_POST["data"], true);
+            $d["ud"] = time();
+
+            $this->send_query("UPDATE qbook SET ud = ". $d["ud"] .", lay_name = '". json_encode($d["from_meta"]) ."' WHERE id = ". $d["from_qb_id"] ." AND (" . $this->madeby_filter(true). ")");
+            $this->send_query("UPDATE qbook SET ud = ". $d["ud"] .", lay_name = '". json_encode($d["to_meta"]) ."' WHERE id = ". $d["to_qb_id"] ." AND (" . $this->madeby_filter(true). ")");
             $this->DB_close($q);
             return true;
+        }
+
+        elseif ($action === "delete"){
+            $this->DB_conn();
+            file_put_contents("qb_del_chk.txt", "info " . $mode, FILE_APPEND);
+            $d = json_decode($mode);
+            $qb_id = intval($d->qb_id);
+            $this->send_query("DELETE FROM qbook WHERE id = '$qb_id' AND madeby = '" . $owner_id . "'");
+            $this->DB_close($q);
+
+            $this->qbook("list"); // refresh session data
+            return json_encode($_SESSION["qbooks"]);
         }
 
         elseif ($action === "qbook_dirs_update"){
@@ -2973,10 +3379,26 @@ class DBase{
                 $this->DB_conn();
                 $d = json_decode($mode, true);
                 $date = time();
+                //$file = "qb_redir_chk.txt";
+                //file_put_contents($file, "src " . json_encode($d));
 
                 $trans = $this->_db->prepare("UPDATE qbook SET lay_name = ?, ud = '$date', lay_id = ? WHERE id = ?");
                 foreach ($d as $qbook)
-                    $trans->execute(array($qbook["lay_name"], $qbook["lay_id"], $qbook["qb_id"]));
+                {
+                    $lay_name = array(
+                        "lay_name" => $qbook["lay_name"],
+                        "lay_ind" => $qbook["lay_ind"]
+                    );
+                    $data_set = array(
+                        json_encode($lay_name),
+                        $qbook["lay_id"],
+                        $qbook["qb_id"]
+                    );
+                    //file_put_contents($file, "add string " . json_encode($data_set), FILE_APPEND);
+                    $trans->execute($data_set);
+                    //file_put_contents($file, "result string " . $trans, FILE_APPEND);
+                }
+
                 $this->DB_close($q);
                 $this->qbook("list"); // refresh session data
                 return json_encode($_SESSION["qbooks"]);
@@ -3102,7 +3524,7 @@ class DBase{
                                       ud,
                                       qkey,
                                       madeby
-                                      FROM quiz ".$cond);
+                                      FROM quiz ". $cond . " ORDER BY id DESC");
             if ($res)
                 while ($bro = $res->fetch(PDO::FETCH_ASSOC))
                 {
@@ -3129,6 +3551,9 @@ class DBase{
 
                                     if (!isset($bro[$key]->djo_avg_id))
                                         $bro[$key]->djo_avg_id = 1;
+
+                                    if (!isset($bro[$key]->self_ban_list))
+                                        $bro[$key]->self_ban_list = [];
                                 }
                                 // RESPS - temporal restoration o missed answers from backup files
                                 else
@@ -3177,6 +3602,11 @@ class DBase{
                             else
                                 $bro[$key] = array();
                         }
+
+                    // Update self_ban_list for previous qbooks
+                    foreach ($bro["resps"] as $r_ind => $r)
+                        if (!isset($bro["settings"]->self_ban_list[$r_ind]))
+                            $bro["settings"]->self_ban_list[$r_ind] = 0;
 
                     $filename = BACKUP_QZS_BLUEPRINT . "/qz_" . $_SESSION["pers"]["id"] . "_" . $bro["id"] . "_" . $bro["qkey"] . ".txt";
                     if (file_exists($filename))
@@ -3252,17 +3682,21 @@ class DBase{
 
                     if (!IS_LOCAL)
                     {
-                        if (!isset($mailer_list[$resp["id"]]))
+                        if ($resp_ord || // no self-eval role
+                            !$d["settings"]["self_ban_list"][$resp_ord]) // self-eval role but not turned off
                         {
-                            $mailer_list[$resp["id"]] = array();
-                            $mailer_focus_name_list[$resp["id"]] = array();
+                            if (!isset($mailer_list[$resp["id"]]))
+                            {
+                                $mailer_list[$resp["id"]] = array();
+                                $mailer_focus_name_list[$resp["id"]] = array();
+                            }
+
+                            $m_slot = &$mailer_list[$resp["id"]];
+
+                            array_push($m_slot, $resp["ukey"]); // in case same resp present if several focus groups of same quiz, he will get N links in one letter
+                            array_push($mailer_focus_name_list[$resp["id"]], $focus_name);
+                            unset($m_slot);
                         }
-
-                        $m_slot = &$mailer_list[$resp["id"]];
-
-                        array_push($m_slot, $resp["ukey"]); // in case same resp present if several focus groups of same quiz, he will get N links in one letter
-                        array_push($mailer_focus_name_list[$resp["id"]], $focus_name);
-                        unset($m_slot);
                     }
                     unset($resp);
                 }
@@ -3350,6 +3784,7 @@ class DBase{
             $sts["comment"] = $d["comment"];
             $sts["qst_list"] = $d["qst_list"];
             $sts["is_anon"] = $d["settings"]["is_anon"];
+            $sts["self_ban_list"] = $d["settings"]["self_ban_list"]; // new
             $sts["start_date"] = $d["settings"]["start_date"] * 1;
             $sts["end_date"] = $d["settings"]["end_date"] * 1;
             $sts["answer_set_id"] = $d["answer_set_id"] * 1;
@@ -3362,6 +3797,7 @@ class DBase{
             $sts["comm_groups"] = $d["settings"]["comm_groups"];
             $sts["answer_opts_list"] = $d["settings"]["answer_opts_list"];
             $sts["intro_tx"] = $d["settings"]["intro_tx"];
+            $sts["is_muted"] = $d["settings"]["is_muted"] * 1;
             $sts["djo_avg_id"] = $d["settings"]["djo_avg_id"] * 1;
 
             unset($sts);
@@ -3369,7 +3805,10 @@ class DBase{
             $qz["settings"] = true_json_code($qz["settings"]);
             $qz_coded = json_encode($qz, JSON_UNESCAPED_UNICODE);
             $qz_coded = str_replace("\\", "♀", $qz_coded);
-            file_put_contents("fresh_qz_backup_". $qz["qkey"] .".txt", $qz_coded);
+
+            if (!is_dir(FRESH_QZS_BACKUP_DIR))
+                mkdir(FRESH_QZS_BACKUP_DIR, 0754, true);
+            file_put_contents("FRESH_QZS_BACKUP_DIR/fresh_qz_backup_". $qz["qkey"] .".txt", $qz_coded);
             // сменить статус рассылки
             $this->send_query("INSERT INTO quiz SET name = '". $qz["name"] ."',
                 cd = ". $qz["cd"] .",
@@ -3473,6 +3912,28 @@ class DBase{
             }
             else return false;
         }
+
+        elseif ($action === "qz_mute")
+        {
+            $d = json_decode($mode);
+            $z = $this->send_query("SELECT settings FROM quiz WHERE id = '". $d->qz_id ."' AND madeby = " . $_SESSION["pers"]["id"]);
+            $fc = $z->fetchAll(PDO::FETCH_ASSOC);
+            $sts = $fc[0]["settings"];
+            $sts = str_replace("\n","<br>", $sts);
+            $sts = str_replace("☼", "\\", $sts);
+            $sts = str_replace("♀♀", "\"",$sts);
+            $sts = str_replace("♀!♀", "\\\"", $sts);
+            $sts = str_replace("♀", "'", $sts);
+            $sts = json_decode($sts);
+            $sts->is_muted = $d->mute_state;
+            $sts->is_muted_tx = $d->mute_tx;
+            $sts = true_json_code($sts);
+            $_SESSION["qzs"][$d->qz_ord]["settings"]->is_muted = $d->mute_state;
+            $_SESSION["qzs"][$d->qz_ord]["settings"]->is_muted_tx = $d->mute_tx;
+            $this->send_query("UPDATE quiz SET settings = '$sts' WHERE id = '". $d->qz_id ."' AND madeby = " . $_SESSION["pers"]["id"]);
+            return true;
+        }
+
 
         elseif ($action === "exclusion_update")
         {

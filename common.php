@@ -77,173 +77,249 @@ function resp_pct_done($d, $qbooks = false)
     $resp = $d["resps"][$d["gr_ord"]][$d["resp_ord"]];
     $cat_id = $resp["cat_id"];
 
-    // Get qbook qsts list
-    $comm_group = $d["settings"]["comm_groups"][$d["gr_ord"]];
-    $qb_ord = get_qb_ord_from_qb_id($comm_group["qb_id"], $qbooks_list);
-    $qst_id_list = $qbooks_list[$qb_ord]["list"];
-    $struct = $qbooks_list[$qb_ord]["struct"];
-    file_put_contents("resp_rec_chk.txt", " \n resp_pct_done qb_ord: $qb_ord", FILE_APPEND);
-
-    // We need to know exact qst qnt of this resp, due to his category
-    $qst_qnt = 0;
-    if ($struct)
-        foreach ($qst_id_list as $v_qid)
-        {
-            if ($struct["q_list"][$v_qid]["cats"][$cat_id]["is_on"])
-                $qst_qnt++;
-        }
-
-    if (!$qst_qnt)
+    if (!$d["resp_ord"] && $d["settings"]["self_ban_list"][$d["gr_ord"]])
+    {
+        file_put_contents("resp_rec_chk.txt", " \n pct complete: disabled self-eval", FILE_APPEND);
+        $answered = 1;
         $qst_qnt = 1;
+    }
+    else
+    {
+        // Get qbook qsts list
+        $comm_group = $d["settings"]["comm_groups"][$d["gr_ord"]];
+        $qb_ord = get_qb_ord_from_qb_id($comm_group["qb_id"], $qbooks_list);
+        $qst_id_list = $qbooks_list[$qb_ord]["list"];
+        $struct = $qbooks_list[$qb_ord]["struct"];
+        file_put_contents("resp_rec_chk.txt", " \n resp_pct_done qb_ord: $qb_ord", FILE_APPEND);
 
-    // How many qsts resp actually have answered
-    $answered = 0;
-    if (count($resp["ans_list"]))
-        foreach ($resp["ans_list"] as $v_ans)
-            if (null !== $v_ans && -1 !== $v_ans)
-                $answered++;
+        // We need to know exact qst qnt of this resp, due to his category
+        $qst_qnt = 0;
+        if ($struct)
+            foreach ($qst_id_list as $v_qid)
+            {
+                if ($struct["q_list"][$v_qid]["cats"][$cat_id]["is_on"])
+                    $qst_qnt++;
+            }
 
-    //file_put_contents("completion_chk_php.txt", "\n\nresp_id = ". $resp["id"] .",  cat_id = $cat_id, qb_ord = $qb_ord, qst_qnt = $qst_qnt, answered = $answered", FILE_APPEND);
-    file_put_contents("resp_rec_chk.txt", " \n pct complete: answered - $answered, qst_qnt = $qst_qnt", FILE_APPEND);
+        if (!$qst_qnt)
+            $qst_qnt = 1;
+
+        // How many qsts resp actually have answered
+        $answered = 0;
+        if (count($resp["ans_list"]))
+            foreach ($resp["ans_list"] as $v_ans)
+                if (null !== $v_ans && -1 !== $v_ans)
+                    $answered++;
+
+        //file_put_contents("completion_chk_php.txt", "\n\nresp_id = ". $resp["id"] .",  cat_id = $cat_id, qb_ord = $qb_ord, qst_qnt = $qst_qnt, answered = $answered", FILE_APPEND);
+        file_put_contents("resp_rec_chk.txt", " \n pct complete: answered - $answered, qst_qnt = $qst_qnt", FILE_APPEND);
+    }
+
     return ($answered / $qst_qnt);
 }
 //----------------------------------------------------------------------------------------------------------------------
 function resp_fb_done($d, $qbooks = null, $qsts = null)
 {
     $passed = true;
+
     $resp = $d["resps"][$d["gr_ord"]][$d["resp_ord"]];
-    $cat_id = $resp["cat_id"];
+    $cat_id = $resp["cat_id"] * 1;
+    file_put_contents("fb_done_log.txt", "START\n");
+    file_put_contents("fb_done_log.txt", "cat_id $cat_id\n", FILE_APPEND);
+
     if (null !== $qbooks)
         $QB = $qbooks;
     else
         $QB = $_SESSION['qbooks'];
 
-    if (null !== $qsts) // #BUG
-        $QSTS = $qsts;
+    if (null !== $qsts)
+        $Q_DB = $qsts;
     else
-        $QSTS = $_SESSION['qsts'];
-
-    $file_chk = "fb_done_chk.txt";
-    //file_put_contents($file_chk, "");
+        $Q_DB = $_SESSION['qsts'];
 
     // Get qbook qsts list
     $comm_group = $d["settings"]["comm_groups"][$d["gr_ord"]];
     $qb_ord = get_qb_ord_from_qb_id($comm_group["qb_id"], $_SESSION["qbooks"]);
     $struct = $QB[$qb_ord]["struct"];
+    file_put_contents("fb_done_log.txt", "qb_ord $qb_ord, qb_id ". $comm_group["qb_id"] ." \n", FILE_APPEND);
 
-    $comp_list_active = array(); // list of comp id's, that are turned on for this resp and can be questioned by mandatory comments
-    $qst_db = $QSTS;
-    //file_put_contents($file_chk, "\nQSTS is array " . is_array($qst_db) . "_", FILE_APPEND);
 
+    /*
+    1. Get id_comp_list of ALL ENABLED+MANDATORY comments for this ROLE in the comm_group comps,
+    2. Check presense of all mandatory + enabled qz_after comments
+    3. Check presense of all comments being filled for all comps from point 1
+    */
+
+    $uniq_real_comp_id_list = array(); // real "blue" comps, backed by the questions in the qbook
     foreach ($struct["q_list"] as $q_id => $q)
-        if (isset($q["cats"]) &&
-            isset($q["cats"][$cat_id]) &&
-            isset($q["cats"][$cat_id]["is_on"]))
-        {
-            if (1 * $q["cats"][$cat_id]["is_on"]) // qst is on for this category
+    {
+        $comp_id = null;
+        foreach ($Q_DB as $q_db)
+            if ($q_db["id"] === $q_id)
             {
-                // get comp id
-                $comp_id = null;
-                foreach ($qst_db as $q_db)
-                    if ($q_db["id"] === $q_id)
-                    {
-                        $comp_id = $q_db["comp_id"];
-                        break;
-                    }
+                $comp_id = $q_db["comp_id"];
+                break;
+            }
 
-                if (null !== $comp_id && !in_array($comp_id, $comp_list_active)) // get list of unique comp id's
+        if (null !== $comp_id &&
+            !in_array($comp_id, $uniq_real_comp_id_list)
+        ) // get list of unique comp id's
+            array_push($uniq_real_comp_id_list, $comp_id);
+    }
+
+    // 1. Get id_comp_list of ALL PRESENT in the comm_group comps, inside them get ords of all mandatory comments for this role to chk their presense later
+    $present_comp_id_list = array();
+    foreach ($comm_group["comp_list"] as $comp_id => $qst_list)
+        if (is_array($qst_list) && count($qst_list)) // list of questions is not empty
+        {
+
+            // check if there is at least one mandatory enabled comment
+            foreach ($qst_list as $q_ord => $qst_tx) {
+                $found_enabled = false;
+                if (isset($comm_group["comp_cats_list"][$comp_id])) {
+                    $cats_specs = $comm_group["comp_cats_list"][$comp_id];
+                    if (isset($cats_specs[$q_ord]) &&
+                        isset($cats_specs[$q_ord][$cat_id]) &&
+                        isset($cats_specs[$q_ord][$cat_id]["is_on"]) &&
+                        $cats_specs[$q_ord][$cat_id]["is_on"] * 1 // this 4 conds track that comment is not disabled for this particular role
+                    )
+                        $found_enabled = true;
+                }
+
+                $is_mandatory = false;
+                if (isset($comm_group["lock_comp_list"][$comp_id])) {
+                    $lock_specs = $comm_group["lock_comp_list"][$comp_id];
+                    if (null !== $lock_specs &&
+                        isset($lock_specs[$q_ord]) &&
+                        $lock_specs[$q_ord] * 1 // this comment is marked with a "lock" to be mandatory (thus unskippable)
+                    )
+                        $is_mandatory = true;
+                }
+
+
+                if ($found_enabled && $is_mandatory)
                 {
-                    array_push($comp_list_active, $comp_id);
+
+                    if (!isset($present_comp_id_list[$comp_id]))
+                        $present_comp_id_list[$comp_id] = array();
+
+                    array_push($present_comp_id_list[$comp_id], $q_ord); // remember ord of a mandatory comment
                 }
             }
         }
-    //file_put_contents($file_chk, "\ncomp_list_active " . json_encode($comp_list_active), FILE_APPEND);
+
+    file_put_contents("fb_done_log.txt", "present_comp_id_list ". json_encode($present_comp_id_list) ."\n", FILE_APPEND);
 
     $resp_feedback_exist = false;
     $fb = $resp["feedback"];
-    if (isset($resp["feedback"]) && is_array($resp["feedback"]) && count($resp["feedback"]))
+    if (isset($resp["feedback"]) &&
+        is_array($resp["feedback"]) &&
+        count($resp["feedback"]))
     {
         $resp_feedback_exist = true;
         $fb = $resp["feedback"];
     }
+    file_put_contents("fb_done_log.txt", "resp_feedback_exist |$resp_feedback_exist|\n", FILE_APPEND);
 
-    //file_put_contents($file_chk, "\nresp_feedback_exist " . $resp_feedback_exist, FILE_APPEND);
-
+    // Check if there is any after_qz comment that is mandatory, enabled for this role and not filled yet (thus empty)
     if ($comm_group["qz_after"]) // there is comment after quiz
     {
+        file_put_contents("fb_done_log.txt", "qz_after: present\n", FILE_APPEND);
         foreach ($comm_group["qz_list"] as $ord => $qz_comment)
             if ($comm_group["lock_qz_list"][$ord]*1 === 1) // comment is mandatory
             {
-                if (!$resp_feedback_exist)
+                $enabled_by_cat = false; // check that this comment enabled for this role
+                if (isset($comm_group["qz_cats_list"]) &&
+                    isset($comm_group["qz_cats_list"][$ord])
+                )
                 {
-                    $passed = false;
-                    break;
-                }
-                elseif (isset($fb["qz_list"]) &&
-                    isset($fb["qz_list"][$ord]) &&
-                    isset($fb["qz_list"][$ord]["tx"])
+                    $specs_slot = $comm_group["qz_cats_list"][$ord];
+                    if (isset($specs_slot[$cat_id]) &&
+                        isset($specs_slot[$cat_id]["is_on"]) &&
+                        $specs_slot[$cat_id]["is_on"] * 1 // this 4 track that comment is not disabled for this role
                     )
+                        $enabled_by_cat = true;
+                }
+
+                if ($enabled_by_cat)
                 {
-                    if (!trim($fb["qz_list"][$ord]["tx"]))
+                    if (!$resp_feedback_exist)
                     {
+                        file_put_contents("fb_done_log.txt", "after_qz, com_ord: $ord - no feedback exist\n", FILE_APPEND);
+                        $passed = false;
+                        break;
+                    }
+                    elseif (isset($fb["qz_list"]) &&
+                        isset($fb["qz_list"][$ord]) &&
+                        isset($fb["qz_list"][$ord]["tx"])
+                    )
+                    {
+                        file_put_contents("fb_done_log.txt", "after_qz, com_ord: $ord - slot exist", FILE_APPEND);
+                        if (!trim($fb["qz_list"][$ord]["tx"]))
+                        {
+                            file_put_contents("fb_done_log.txt", " but is empty\n", FILE_APPEND);
+                            $passed = false;
+                            break;
+                        }
+                        else
+                            file_put_contents("fb_done_log.txt", " and filled ok\n", FILE_APPEND);
+                    }
+                    else
+                    {
+                        file_put_contents("fb_done_log.txt", "after_qz, com_ord: $ord - no feedback slot\n", FILE_APPEND);
                         $passed = false;
                         break;
                     }
                 }
+            }
+    }
+
+    // Check only if qz_after stuff is considered filled
+    if ($passed &&
+        $comm_group["comp_after"] &&
+        count($present_comp_id_list))
+    {
+        file_put_contents("fb_done_log.txt", "comp_after: present\n", FILE_APPEND);
+
+        foreach ($present_comp_id_list as $comp_id => $comp)
+            foreach ($comp as $comm_ord)
+            {
+                if (!$resp_feedback_exist)
+                {
+                    file_put_contents("fb_done_log.txt", "comp_id: $comp_id, com_ord: $comm_ord - no feedback exist\n", FILE_APPEND);
+                    $passed = false;
+                    break;
+                    break;
+                }
+                // Comment for this open qst of this comp_id is present
+                elseif (isset($fb["comp_list"]) &&
+                        isset($fb["comp_list"][$comp_id]) &&
+                        isset($fb["comp_list"][$comp_id][$comm_ord]) &&
+                        isset($fb["comp_list"][$comp_id][$comm_ord]["tx"])
+                )
+                {
+                    file_put_contents("fb_done_log.txt", "comp_id: $comp_id, com_ord: $comm_ord - slot exist", FILE_APPEND);
+                    if (!trim($fb["comp_list"][$comp_id][$comm_ord]["tx"])) // but comment is empty
+                    {
+                        file_put_contents("fb_done_log.txt", " but is empty\n", FILE_APPEND);
+                        $passed = false;
+                        break;
+                        break;
+                    }
+                    else
+                        file_put_contents("fb_done_log.txt", " and filled ok\n", FILE_APPEND);
+                }
                 else
                 {
+                    file_put_contents("fb_done_log.txt", "comp_id: $comp_id, com_ord: $comm_ord - no feedback slot\n", FILE_APPEND);
                     $passed = false;
+                    break;
                     break;
                 }
             }
     }
 
-    //file_put_contents($file_chk, "\nqz_after passed $passed, comm_group[\"comp_after\"] " . $comm_group["comp_after"], FILE_APPEND);
-
-    if ($passed && $comm_group["comp_after"])
-    {
-        foreach ($comm_group["comp_list"] as $comp_id => $comp)
-            if (null !== $comp && in_array($comp_id*1, $comp_list_active))
-            {
-                //file_put_contents($file_chk, "\ncomp_id $comp_id is in active list", FILE_APPEND);
-                // Track every mandatory comp comment (a.k.a open question)
-                foreach ($comp as $comm_ord => $comment)
-                {
-                    //file_put_contents($file_chk, " is_locked" . $comm_group["lock_comp_list"][$comp_id][$comm_ord], FILE_APPEND);
-                    if ($comm_group["lock_comp_list"][$comp_id][$comm_ord]*1 === 1) // comment is mandatory
-                    {
-                        if (!$resp_feedback_exist)
-                        {
-                            $passed = false;
-                            break;
-                            break;
-                        }
-                        elseif (isset($fb["comp_list"]) &&
-                            isset($fb["comp_list"][$comp_id]) &&
-                            isset($fb["comp_list"][$comp_id][$comm_ord]) &&
-                            isset($fb["comp_list"][$comp_id][$comm_ord]["tx"])
-                        ) // no comment given for this after_comp open qst
-                        {
-                            //file_put_contents($file_chk, " answered fb_tx: _" . $fb["comp_list"][$comp_id][$comm_ord]["tx"] ."_", FILE_APPEND);
-                            if (!trim($fb["comp_list"][$comp_id][$comm_ord]["tx"]))
-                            {
-                                $passed = false;
-                                break;
-                                break;
-                            }
-
-                        }
-                        else
-                        {
-                            $passed = false;
-                            break;
-                            break;
-                        }
-                    }
-                }
-
-            }
-    }
+    //file_put_contents("fb_done_log.txt", "\n\n Q_DB ". json_encode($Q_DB) ."", FILE_APPEND);
 
     return $passed;
 }
