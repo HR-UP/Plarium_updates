@@ -931,7 +931,7 @@ function bld_related_qb_lines(layer, host_id) {
         $ad.qbooks.forEach(function (v_qb) {
             // #TEST
             let lay_name = v_qb.lay_name;
-            if (lay_name.length > 4)
+            if (null !== lay_name && lay_name.length > 4)
                 v_qb.meta = JSON.parse(v_qb.lay_name);
             // #TEST-E
 
