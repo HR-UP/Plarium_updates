@@ -498,8 +498,8 @@ function content_deli_control_build_list(do_return) {
             .mouseenter(function()
             {
                 floater_hint("show",{
-                    head: "Перензначить дату завершения",
-                    tx: "Вы можете выбрать новую дату завершения опроса.",
+                    head: "Переназначить дату завершения",
+                    tx: "Вы можете установить новую дату завершения опроса.",
                     w: 400,
                     dx: 0,
                     dy: 20,
