@@ -16,6 +16,7 @@ function content_feedback(action, qz_ord, batch_ord)
         let sett = qz.settings;
         let comm_group = sett.comm_groups[batch_ord];
 
+
         // GEt general quantity of comment questions
         let qz_qnt = 0;
         if (comm_group.qz_list)
@@ -87,6 +88,14 @@ function content_feedback(action, qz_ord, batch_ord)
         let sett = qz.settings;
         let comm_group = sett.comm_groups[last_fb_opened.batch_ord];
 
+        let present_cat_id_list = [];
+        qz.resps.forEach(function (v_gr) {
+            v_gr.forEach(function (v_resp) {
+                if (present_cat_id_list.indexOf(v_resp.cat_id) === -1)
+                    present_cat_id_list.push(v_resp.cat_id);
+            });
+        });
+
         if ("qz" === qz_ord)
         {
             s += "<div class='section' type='qz'>";
@@ -100,36 +109,51 @@ function content_feedback(action, qz_ord, batch_ord)
                             v_qst +
                         "</div>";
                     $cats_list_template.forEach(function (v_cat_id) {
-                        let comments_list = [];
-                        group.forEach(function (v_resp) {
-                            if (v_resp.cat_id === v_cat_id && !v_resp.ignore)
-                            {
-                                if (v_resp.feedback.hasOwnProperty("qz_list"))
-                                {
-                                    let fb = v_resp.feedback.qz_list;
-                                    if (fb.hasOwnProperty(i_qst) //&&
-                                        //v_resp.ans_list.length
-                                    ) // && fb[i_qst].tx
-                                    {
-                                        if (fb[i_qst].tx)
-                                            comments_list.push(fb[i_qst].tx);
-                                        else
-                                            comments_list.push("...");
-                                    }
-                                }
-                                else
-                                    comments_list.push("...");
-                            }
-                        });
 
-                        if (comments_list.length)
+                        let allow = true;
+                        if (present_cat_id_list.indexOf(v_cat_id) === -1) // no such cat present in the quiz - don't ,ake a slot for it
+                            allow = false;
+                        else
+                        if (!v_cat_id &&
+                            qz.settings.hasOwnProperty("self_ban_list") &&
+                            qz.settings.self_ban_list.hasOwnProperty(last_fb_opened.batch_ord) &&
+                            qz.settings.self_ban_list[last_fb_opened.batch_ord]*1
+                        )
+                            allow = false;
+
+                        if (allow)
                         {
-                            s += "<div class='cat_box' ord='"+ i_qst +"'>";
-                            s += "<div class='cat_head'>- "+ g_cats_name_list_short[v_cat_id] +" -</div>";
-                            comments_list.forEach(function (v_tx) {
-                                s += "<textarea class='line'>"+ v_tx +"</textarea>";
+                            let comments_list = [];
+                            group.forEach(function (v_resp) {
+                                if (v_resp.cat_id === v_cat_id && !v_resp.ignore)
+                                {
+                                    if (v_resp.feedback.hasOwnProperty("qz_list"))
+                                    {
+                                        let fb = v_resp.feedback.qz_list;
+                                        if (fb.hasOwnProperty(i_qst) //&&
+                                        //v_resp.ans_list.length
+                                        ) // && fb[i_qst].tx
+                                        {
+                                            if (fb[i_qst].tx)
+                                                comments_list.push(fb[i_qst].tx);
+                                            else
+                                                comments_list.push("...");
+                                        }
+                                    }
+                                    else
+                                        comments_list.push("...");
+                                }
                             });
-                            s += "</div>";
+
+                            if (comments_list.length)
+                            {
+                                s += "<div class='cat_box' ord='"+ i_qst +"'>";
+                                s += "<div class='cat_head'>- "+ g_cats_name_list_short[v_cat_id] +" -</div>";
+                                comments_list.forEach(function (v_tx) {
+                                    s += "<textarea class='line'>"+ v_tx +"</textarea>";
+                                });
+                                s += "</div>";
+                            }
                         }
                     });
                 });
@@ -182,41 +206,58 @@ function content_feedback(action, qz_ord, batch_ord)
                                 //"<div class='tip'>вопрос</div> " +
                                 v_qst +"</div>";
                             $cats_list_template.forEach(function (v_cat_id) {
-                                let comments_list = [];
-                                group.forEach(function (v_resp) {
-                                    if (v_resp.cat_id === v_cat_id && !v_resp.ignore)
-                                    {
-                                        if (v_resp.feedback.hasOwnProperty("comp_list"))
-                                        {
-                                            let fb = v_resp.feedback.comp_list;
-                                            console.log("fb: ", fb,  "comp_id: " + comp_id +", i_qst: " + i_qst);
-                                            if (fb.hasOwnProperty(comp_id) &&
-                                                null !== fb[comp_id] &&
-                                                fb[comp_id].hasOwnProperty(i_qst)
-                                                //v_resp.ans_list.length
-                                            ) // fb[comp_id][i_qst].tx
-                                            {
-                                                line_added++;
 
-                                                if (fb[comp_id][i_qst].tx)
-                                                    comments_list.push(fb[comp_id][i_qst].tx);
-                                                else
-                                                    comments_list.push("...");
-                                            }
-                                        }
-                                        else
-                                            comments_list.push("...");
-                                    }
-                                });
+                                let allow = true;
+                                if (present_cat_id_list.indexOf(v_cat_id) === -1) // no such cat present in the quiz - don't ,ake a slot for it
+                                    allow = false;
+                                else
+                                if (!v_cat_id &&
+                                    qz.settings.hasOwnProperty("self_ban_list") &&
+                                    qz.settings.self_ban_list.hasOwnProperty(last_fb_opened.batch_ord) &&
+                                    qz.settings.self_ban_list[last_fb_opened.batch_ord]*1
+                                )
+                                    allow = false;
 
-                                if (comments_list.length)
+
+
+                                if (allow)
                                 {
-                                    wnd += "<div class='cat_box' ord='"+ i_qst +"'>";
-                                    wnd += "<div class='cat_head'>- "+ g_cats_name_list_short[v_cat_id] +" -</div>";
-                                    comments_list.forEach(function (v_tx) {
-                                        wnd += "<textarea class='line'>"+ v_tx +"</textarea>";
+                                    let comments_list = [];
+                                    group.forEach(function (v_resp) {
+                                        if (v_resp.cat_id === v_cat_id && !v_resp.ignore)
+                                        {
+                                            if (v_resp.feedback.hasOwnProperty("comp_list"))
+                                            {
+                                                let fb = v_resp.feedback.comp_list;
+                                                console.log("fb: ", fb,  "comp_id: " + comp_id +", i_qst: " + i_qst);
+                                                if (fb.hasOwnProperty(comp_id) &&
+                                                    null !== fb[comp_id] &&
+                                                    fb[comp_id].hasOwnProperty(i_qst)
+                                                //v_resp.ans_list.length
+                                                ) // fb[comp_id][i_qst].tx
+                                                {
+                                                    line_added++;
+
+                                                    if (fb[comp_id][i_qst].tx)
+                                                        comments_list.push(fb[comp_id][i_qst].tx);
+                                                    else
+                                                        comments_list.push("...");
+                                                }
+                                            }
+                                            else
+                                                comments_list.push("...");
+                                        }
                                     });
-                                    wnd += "</div>";
+
+                                    if (comments_list.length)
+                                    {
+                                        wnd += "<div class='cat_box' ord='"+ i_qst +"'>";
+                                        wnd += "<div class='cat_head'>- "+ g_cats_name_list_short[v_cat_id] +" -</div>";
+                                        comments_list.forEach(function (v_tx) {
+                                            wnd += "<textarea class='line'>"+ v_tx +"</textarea>";
+                                        });
+                                        wnd += "</div>";
+                                    }
                                 }
                             });
                         });
