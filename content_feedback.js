@@ -148,7 +148,7 @@ function content_feedback(action, qz_ord, batch_ord)
             blue_comp_id_list.forEach(function (v) {
                 comp_final_list.push(v);
             });
-            Object.keys(comm_group.comp_list).map(function (k, i_slot) {
+            Object.keys(comm_group.comp_list).map(function (k) {
                 if (!blue_comp_id_list.hasOwnProperty(k*1))
                 {
                     red_comp_id_list.push(k*1);
@@ -163,7 +163,7 @@ function content_feedback(action, qz_ord, batch_ord)
                     "</div>";
 
                 comp_final_list.forEach(function (comp_id) {
-                    let v_slot = comm_group.comp_list[k];
+                    let v_slot = comm_group.comp_list[comp_id];
                     if (v_slot && typeof v_slot === "object" && v_slot.length)
                     {
                         let comp_ord = get_comp_ord_from_comp_id(comp_id);
