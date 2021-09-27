@@ -173,13 +173,15 @@ function content_feedback(action, qz_ord, batch_ord)
                 comp_final_list.push(v);
             });
             Object.keys(comm_group.comp_list).map(function (k) {
-                if (!blue_comp_id_list.hasOwnProperty(k*1))
+                if (blue_comp_id_list.indexOf(k*1) === -1)
                 {
                     red_comp_id_list.push(k*1);
                     comp_final_list.push(k*1);
                 }
             });
-
+            console.log("blue_comp_id_list", blue_comp_id_list);
+            console.log("red_comp_id_list", red_comp_id_list);
+            console.log("comp_final_list", comp_final_list);
 
             s += "<div class='section' type='comp'>";
                 s += "<div class='title'>Комментарии после компетенций" +
