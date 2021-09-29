@@ -755,7 +755,7 @@ function content_options_feedback_list_update(action, specs)
 
                 // Remove corresponding html elements
                 $(".head[feedback_list][id='"+ cid +"'][type='comp'").remove();
-                $(".feedback_list[id='"+ cid +"'][type='comp'").remove();
+                $(".comm_group[batch_ord='"+ batch_ord +"'] .feedback_list[id='"+ cid +"'][type='comp'").remove();
                 floater_hint("remove", null);
             });
 
@@ -784,9 +784,9 @@ function content_options_feedback_list_update(action, specs)
                     id = $(this).closest(".feedback_list").attr("id") * 1;
                 }
 
-                //console.log("btn_add_fb_line press, stats are", {batch_ord:batch_ord, type:type, id: id});
+                console.log("btn_add_fb_line press, stats are", {batch_ord:batch_ord, type:type, id: id});
                 let s = comm_slot_add_qst(type, batch_ord, id);
-                $(".feedback_list[id='"+ id +"'][type='"+ type +"'").append(s);
+                $(".comm_group[batch_ord='"+ batch_ord +"'] .feedback_list[id='"+ id +"'][type='"+ type +"'").append(s);
                 feedback_buffer("save");
                 content_options_feedback_list_update("add_events", null);
             });

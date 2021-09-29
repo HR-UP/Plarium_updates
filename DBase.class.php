@@ -1796,7 +1796,7 @@ class DBase{
                                     $ans["error"] = "Не найден id респондента.";
                                 else
                                 {
-                                    $resp["ord"] = $ord;
+                                    $resp["ord"] = $ans["resp_ord"];
                                     //$ans["resp_ord"] = $ord;
                                     //$ans["group_ord"] = $gr_ord;
                                     $ans["fb_log"] = $resp_data["feedback"];
@@ -1805,7 +1805,7 @@ class DBase{
 
                                     //else
                                     //    $ans["map_step"] = null;
-                                    $ans["feedback"] = $sett["comm_groups"][$gr_ord];
+                                    $ans["feedback"] = $sett["comm_groups"][$ans["group_ord"]];
 
                                     $fb = $ans["feedback"];
                                     $cid = $resp["cat_id"] * 1;
@@ -1836,6 +1836,8 @@ class DBase{
                                                             $new_dec_comment = $fb["qz_cats_list"][$i][$cid]["tx"];
                                                             array_push($resulting_list, $new_dec_comment);
                                                         }
+                                                        else
+                                                            array_push($resulting_list, $qz_comment); // keep default
                                                     }
                                                 }
                                                 else
@@ -1862,7 +1864,6 @@ class DBase{
                                                     $comp_cat_slot_exists = true;
                                                 }
 
-
                                                 foreach ($comp as $i => $comp_comment)
                                                 {
                                                     if ($comp_cat_slot_exists &&
@@ -1874,6 +1875,7 @@ class DBase{
                                                         $comp_cat_slot = $fb["comp_cats_list"][$comp_id][$i][$cid];
                                                         if (1 === $comp_cat_slot["is_on"]*1) // comment is disabled for this role
                                                         {
+
                                                             // Fill competentions slot
                                                             if (!isset($map_comps_block[$comp_id]))
                                                                 $map_comps_block[$comp_id] = array();
@@ -1891,6 +1893,8 @@ class DBase{
                                                                 $new_dec_comment = $comp_cat_slot["tx"];
                                                                 array_push($resulting_list, $new_dec_comment);
                                                             }
+                                                            else
+                                                                array_push($resulting_list, $comp_comment);
                                                         }
                                                     }
                                                     else
@@ -1940,15 +1944,16 @@ class DBase{
                                         $ans["fb_done_chk"] = 1;
 
 
+                                    /*
                                     $is_finished_trough = true;
                                     if (isset($resp["map_len"]) &&
                                         isset($resp["map_step"]) &&
                                         $resp["map_step"]*1 < $resp["map_len"]*1
                                     )
                                         $is_finished_trough = false;
+                                    */
 
-
-                                    if ($qb_pct_done >= 1 && $fb_done && $is_finished_trough)
+                                    if ($qb_pct_done >= 1 && $fb_done) // && $is_finished_trough
                                         $ans["error"] = "Опрос Вами успешно заполнен.";
                                     else
                                     {
@@ -2192,6 +2197,8 @@ class DBase{
                             $resps = true_json_code($data[0]["resps"], "decode");
                             $pers_id = $data[0]["madeby"] * 1;
                             $QBOOKS = $this->qbook("list", "no_recon", $pers_id);
+                            $this->question("list", false, false, $pers_id); // refreshes  qsts db, sets into the session
+                            $QSTS = $_SESSION['qsts'];
 
                             // Record the currents answer
                             $resp = &$resps[$d->group_ord][$d->resp_ord];
@@ -2206,31 +2213,42 @@ class DBase{
                                     $resp["ans_list"][$i] = -1; // absent answer, cuz it's blocked for this resp's category (or for other reasons)
 
 
-                            $qz_status = 1; // Detect if quiz is finished (expired and/or completed) or not
-                            $chk_slot = []; // Slot to check progress of resp
+                            $qz_status = 0; // Detect if quiz is finished (expired and/or completed) or not
+                            // Slot to check progress of resp
+                            $chk_slot = [];
                             $chk_slot["resps"] = $resps;
                             $chk_slot["settings"] = $settings;
-                            //file_put_contents("completion_chk_php.txt", "START");
+                            $chk_slot["gr_ord"] = $d->group_ord;
+                            $chk_slot["resp_ord"] = $d->resp_ord;
 
-                            if (time() < $settings["end_date"]*1) // qz is not expired yet
-                                foreach ($resps as $gr_ord => $group)
+                            $qb_pct_done = resp_pct_done($chk_slot, $QBOOKS);
+                            $fb_done = resp_fb_done($chk_slot, $QBOOKS, $QSTS);
+
+                            if ($qb_pct_done >= 1 && $fb_done)
+                                $qz_status = 1;
+                            /*
+                            //if (time() < $settings["end_date"]*1) // qz is not expired yet
+
+                            foreach ($resps as $gr_ord => $group)
+                            {
+                                $chk_slot["gr_ord"] = $gr_ord;
+                                foreach ($group as $resp_ord => $r)
                                 {
-                                    $chk_slot["gr_ord"] = $gr_ord;
-                                    foreach ($group as $resp_ord => $r)
+                                    $chk_slot["resp_ord"] = $resp_ord;
+                                    //file_put_contents($file, " \n key  gr:$gr_ord re:$resp_ord  completion: " . resp_pct_done($chk_slot, $QBOOKS), FILE_APPEND);
+                                    if (!$r["ignore"] && resp_pct_done($chk_slot, $QBOOKS) < 1) // not excluded and not all qsts answered
                                     {
-                                        $chk_slot["resp_ord"] = $resp_ord;
-                                        //file_put_contents($file, " \n key  gr:$gr_ord re:$resp_ord  completion: " . resp_pct_done($chk_slot, $QBOOKS), FILE_APPEND);
-                                        if (!$r["ignore"] && resp_pct_done($chk_slot, $QBOOKS) < 1) // not excluded and not all qsts answered
-                                        {
-                                            $qz_status = 0;
-                                            break;
-                                        }
-                                    }
-
-                                    if (!$qz_status)
+                                        $qz_status = 0;
                                         break;
+                                    }
                                 }
+
+                                if (!$qz_status)
+                                    break;
+                            }
+
                             //else $ans = "expired";
+                            */
 
                             $proper_array = []; // when array saves value at indexes not in strict order, it becomes assoc type, we redo it to index type by this
                             for ($i=0; $i<count($resp["ans_list"]); $i++)
@@ -2260,7 +2278,7 @@ class DBase{
                     //http://evaluation.plarium.local/answers_backup/feedback_q_QWwyt_r_CadoG.txt
                     file_put_contents(BACKUP_ANSWERS_DIR . "/feedback_q_". $d->qkey ."_r_".$d->rkey .".txt", json_encode($d->feedback, JSON_UNESCAPED_UNICODE));
 
-                    $q = $this->send_query("SELECT resps FROM quiz WHERE qkey = '". $d->qkey ."'");
+                    $q = $this->send_query("SELECT resps, settings, madeby FROM quiz WHERE qkey = '". $d->qkey ."'");
                     if ($q)
                     {
                         $data = $q->fetchAll(PDO::FETCH_ASSOC);
@@ -2268,7 +2286,13 @@ class DBase{
                             $ans = false;
                         else
                         {
+                            $settings = true_json_code($data[0]["settings"], "decode");
                             $resps = true_json_code($data[0]["resps"], "decode"); // proper decode json
+                            $pers_id = $data[0]["madeby"] * 1;
+                            $QBOOKS = $this->qbook("list", "no_recon", $pers_id);
+                            $this->question("list", false, false, $pers_id); // refreshes  qsts db, sets into the session
+                            $QSTS = $_SESSION['qsts'];
+
                             $resp = &$resps[$d->group_ord][$d->resp_ord];
                             $resp["feedback"] = $d->feedback; // record user feedback answers
                             $resp["last_upd"] = time();
@@ -2276,10 +2300,26 @@ class DBase{
                                 $resp["map_step"] = $d->map_step;
                             if (isset($d->map_len))
                                 $resp["map_len"] = $d->map_len;
+
+
+                            $qz_status = 0; // Detect if quiz is finished (expired and/or completed) or not
+                            // Slot to check progress of resp
+                            $chk_slot = [];
+                            $chk_slot["resps"] = $resps;
+                            $chk_slot["settings"] = $settings;
+                            $chk_slot["gr_ord"] = $d->group_ord;
+                            $chk_slot["resp_ord"] = $d->resp_ord;
+
+                            $qb_pct_done = resp_pct_done($chk_slot, $QBOOKS);
+                            $fb_done = resp_fb_done($chk_slot, $QBOOKS, $QSTS);
+
+                            if ($qb_pct_done >= 1 && $fb_done)
+                                $qz_status = 1;
+
                             $resps = true_json_code($resps); // proper encode json
 
                             // Update info in DB
-                            $this->send_query("UPDATE quiz SET resps = '$resps' WHERE qkey = '". $d->qkey ."'");
+                            $this->send_query("UPDATE quiz SET status = '$qz_status', resps = '$resps' WHERE qkey = '". $d->qkey ."'");
                             $ans = true;
                         }
                     }
