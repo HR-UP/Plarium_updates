@@ -559,7 +559,9 @@ function get_resp_fb_done($d)
     Object.keys($comm_group.comp_list).map(function (k) {
         let $comp_id = k * 1;
         let $qst_list = $comm_group.comp_list[k];
-        if (typeof $qst_list === "object" && $qst_list.length)
+        if (typeof $qst_list === "object" &&
+            $qst_list.length &&
+            null !== $qst_list)
         {
 
             // check if there is at least one mandatory enabled comment
