@@ -203,7 +203,7 @@ function report5_indicator(qz_ord, batch_ord, targ_qz_id) {
     {
         head_elems.push("Целевой уровень следующей должности");
         head_elems.push("Соответсвие следующей должности в %");
-        global_colspan += 2;
+        //global_colspan += 2;
     }
 
     let cat_col_spans = {
@@ -627,7 +627,7 @@ function report5_indicator_resp(qz_ord, batch_ord, targ_qz_id) {
     {
         head_elems.push("Целевой уровень следующей должности");
         head_elems.push("Соответсвие следующей должности в %");
-        global_colspan += 2;
+        //global_colspan += 2;
     }
 
 
