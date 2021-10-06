@@ -2212,44 +2212,6 @@ class DBase{
                                 if (null === $resp["ans_list"][$i])
                                     $resp["ans_list"][$i] = -1; // absent answer, cuz it's blocked for this resp's category (or for other reasons)
 
-
-                            $qz_status = 0; // Detect if quiz is finished (expired and/or completed) or not
-                            // Slot to check progress of resp
-                            $chk_slot = [];
-                            $chk_slot["resps"] = $resps;
-                            $chk_slot["settings"] = $settings;
-                            $chk_slot["gr_ord"] = $d->group_ord;
-                            $chk_slot["resp_ord"] = $d->resp_ord;
-
-                            $qb_pct_done = resp_pct_done($chk_slot, $QBOOKS);
-                            $fb_done = resp_fb_done($chk_slot, $QBOOKS, $QSTS);
-
-                            //if ($qb_pct_done >= 1 && $fb_done)
-                            //    $qz_status = 1;
-                            /*
-                            //if (time() < $settings["end_date"]*1) // qz is not expired yet
-
-                            foreach ($resps as $gr_ord => $group)
-                            {
-                                $chk_slot["gr_ord"] = $gr_ord;
-                                foreach ($group as $resp_ord => $r)
-                                {
-                                    $chk_slot["resp_ord"] = $resp_ord;
-                                    //file_put_contents($file, " \n key  gr:$gr_ord re:$resp_ord  completion: " . resp_pct_done($chk_slot, $QBOOKS), FILE_APPEND);
-                                    if (!$r["ignore"] && resp_pct_done($chk_slot, $QBOOKS) < 1) // not excluded and not all qsts answered
-                                    {
-                                        $qz_status = 0;
-                                        break;
-                                    }
-                                }
-
-                                if (!$qz_status)
-                                    break;
-                            }
-
-                            //else $ans = "expired";
-                            */
-
                             $proper_array = []; // when array saves value at indexes not in strict order, it becomes assoc type, we redo it to index type by this
                             for ($i=0; $i<count($resp["ans_list"]); $i++)
                                 array_push($proper_array, $resp["ans_list"][$i]);
@@ -2260,7 +2222,7 @@ class DBase{
                             // Update info in DB
                             $resps = true_json_code($resps);
                             //file_put_contents($file, " \n before qz update: ", FILE_APPEND);
-                            $this->send_query("UPDATE quiz SET status = '$qz_status', resps = '$resps' WHERE qkey = '". $d->qkey ."'");
+                            $this->send_query("UPDATE quiz SET resps = '$resps' WHERE qkey = '". $d->qkey ."'");
                             $ans = true;
                         }
                     }
@@ -2301,25 +2263,10 @@ class DBase{
                             if (isset($d->map_len))
                                 $resp["map_len"] = $d->map_len;
 
-
-                            $qz_status = 0; // Detect if quiz is finished (expired and/or completed) or not
-                            // Slot to check progress of resp
-                            $chk_slot = [];
-                            $chk_slot["resps"] = $resps;
-                            $chk_slot["settings"] = $settings;
-                            $chk_slot["gr_ord"] = $d->group_ord;
-                            $chk_slot["resp_ord"] = $d->resp_ord;
-
-                            $qb_pct_done = resp_pct_done($chk_slot, $QBOOKS);
-                            $fb_done = resp_fb_done($chk_slot, $QBOOKS, $QSTS);
-
-                            //if ($qb_pct_done >= 1 && $fb_done)
-                            //    $qz_status = 1;
-
                             $resps = true_json_code($resps); // proper encode json
 
                             // Update info in DB
-                            $this->send_query("UPDATE quiz SET status = '$qz_status', resps = '$resps' WHERE qkey = '". $d->qkey ."'");
+                            $this->send_query("UPDATE quiz SET resps = '$resps' WHERE qkey = '". $d->qkey ."'");
                             $ans = true;
                         }
                     }
@@ -3553,6 +3500,10 @@ class DBase{
             if (file_exists(COMMENTS_FILE))
                 $comments = json_decode(file_get_contents(COMMENTS_FILE), true);
 
+            $QBOOKS = $this->qbook("list", "no_recon", $owner_id);
+            $this->question("list", false, false, $owner_id); // refreshes  qsts db, sets into the session
+            $QSTS = $_SESSION['qsts'];
+
             $_SESSION['qzs'] = array();
             $cond = $this->set_select_cond($owner_id, "quiz");
 
@@ -3645,6 +3596,8 @@ class DBase{
                                 $bro[$key] = array();
                         }
 
+
+
                     // Update self_ban_list for previous qbooks
                     foreach ($bro["resps"] as $r_ind => $r)
                         if (!isset($bro["settings"]->self_ban_list[$r_ind]))
@@ -3655,6 +3608,36 @@ class DBase{
                         $bro["can_restore"] = 1;
                     else
                         $bro["can_restore"] = 0;
+
+                    // Recheck completion of quizes
+                    $qz_status = 0;
+                    $resps_qnt = 0;
+                    $resps_done = 0;
+                    $chk_slot = [];
+                    $chk_slot["resps"] = $bro["resps"];
+                    $chk_slot["settings"] = $bro["settings"];
+                    foreach ($chk_slot["resps"] as $gr_ord => $gr)
+                        foreach ($gr as $resp_ord => $r)
+                        {
+                            $resps_qnt++;
+                            $chk_slot["gr_ord"] = $gr_ord;
+                            $chk_slot["resp_ord"] = $resp_ord;
+                            $qb_pct_done = resp_pct_done($chk_slot, $QBOOKS);
+                            $fb_done = resp_fb_done($chk_slot, $QBOOKS, $QSTS);
+                            if ($qb_pct_done >= 1 && $fb_done)
+                                $resps_done++;
+                                $qz_status = 1;
+                        }
+
+                    if ($resps_done === $resps_qnt)
+                        $qz_status = 1;
+
+                    // Recalculated status don't corresponds to current one
+                    if ($qz_status !== $bro["status"]*1)
+                    {
+                        $bro["status"] = $qz_status;
+                        $this->send_query("UPDATE quiz SET status = '$qz_status' WHERE id = '". $bro["id"] ."'");
+                    }
                     array_push($_SESSION['qzs'], $bro);
                 }
             if ($reconn)
