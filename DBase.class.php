@@ -3495,6 +3495,7 @@ class DBase{
 
         if ($action === "list")
         {
+            file_put_contents("qz_stat_chk.txt", "");
             // Get all the feedback comments
             $comments = array();
             if (file_exists(COMMENTS_FILE))
@@ -3615,7 +3616,13 @@ class DBase{
                     $resps_done = 0;
                     $chk_slot = [];
                     $chk_slot["resps"] = $bro["resps"];
+                    $chk_slot["resps"] = true_json_code($chk_slot["resps"]);
+                    $chk_slot["resps"] = true_json_code($chk_slot["resps"], "decode");
+
                     $chk_slot["settings"] = $bro["settings"];
+                    $chk_slot["settings"] = true_json_code($chk_slot["settings"]);
+                    $chk_slot["settings"] = true_json_code($chk_slot["settings"], "decode");
+
                     foreach ($chk_slot["resps"] as $gr_ord => $gr)
                         foreach ($gr as $resp_ord => $r)
                         {
@@ -3624,16 +3631,16 @@ class DBase{
                             $chk_slot["resp_ord"] = $resp_ord;
                             $qb_pct_done = resp_pct_done($chk_slot, $QBOOKS);
                             $fb_done = resp_fb_done($chk_slot, $QBOOKS, $QSTS);
+                            file_put_contents("qz_stat_chk.txt", "\n quiz" . $bro["name"] . ", g: $gr_ord, r: $resp_ord, qb_pct: $qb_pct_done, fb_done: $fb_done", FILE_APPEND);
                             if ($qb_pct_done >= 1 && $fb_done)
                                 $resps_done++;
-                                $qz_status = 1;
                         }
 
                     if ($resps_done === $resps_qnt)
                         $qz_status = 1;
 
                     // Recalculated status don't corresponds to current one
-                    if ($qz_status !== $bro["status"]*1)
+                    if ($qz_status !== $bro["status"]*1 && 1 !== $bro["status"]*1) // can oly complete quiz, not uncomplete
                     {
                         $bro["status"] = $qz_status;
                         $this->send_query("UPDATE quiz SET status = '$qz_status' WHERE id = '". $bro["id"] ."'");
