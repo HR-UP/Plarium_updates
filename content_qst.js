@@ -1552,7 +1552,7 @@ function content_qst_events()
                             }
                     // Check if qst_tx is unique
                     let match = "none";
-                    let match_comp_name = "<компетенция не определена>";
+                    let match_comp_name = "(";
                     if ($ad.qsts.length)
                         for (let i=0; i<$ad.qsts.length; i++)
                             if ($ad.qsts[i].tx.toLowerCase() === tx_test)
@@ -1565,16 +1565,24 @@ function content_qst_events()
                                 else
                                 {
                                     match = "part";
-                                    // get the matching qst_tx comp's name
+                                    // get the matching qst_tx comp's name(s)
                                     if ($ad.comps.length)
                                         for (let k=0; k<$ad.comps.length; k++)
                                             if ($ad.comps[k].id === $ad.qsts[i].comp_id)
                                             {
-                                                match_comp_name = $ad.comps[k].name;
+                                                if ("(" !== match_comp_name)
+                                                    match_comp_name += ", ";
+
+                                                match_comp_name += $ad.comps[k].name;
                                                 break;
                                             }
                                 }
                             }
+
+                    if ("(" === match_comp_name)
+                        match_comp_name = "<компетенция не определена>";
+                    else
+                        match_comp_name += ")";
 
                     if (match === "full")
                         message_ex("show","info","direct","Данный вопрос в компетенции уже имеется.");
@@ -1583,7 +1591,7 @@ function content_qst_events()
                     else if (!form.tx)
                         message_ex("show","info","direct","Введите текст вопроса.");
                     else if (match === "part")
-                        message_ex("show","confirm","direct","Вопрос с таким содержанием имеется в компетенции <b>"+match_comp_name+"</b>, продолжить?.",form,"qst_add_notice");
+                        message_ex("show","confirm","qst_add_notice",{comp_list: match_comp_name, form: form});
                     else
                         sendAJ("qst_add", JSON.stringify(form), "single");
                     break;

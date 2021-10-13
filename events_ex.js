@@ -165,6 +165,12 @@ function message_ex($action,$type,$about,$data,$tags){
                 $cont = "Ошибка создания респондента. Вам необходимо выбрать подразделение. Если подразделений нет - их необходимо сперва создать.";
                 break;
 
+
+            case "qst_add_notice":
+                $head = "Добавление нового вопроса";
+                $cont = "Вопрос с таким содержанием имеется в компетенции(ях) <b>" + $data.comp_list + "</b>, все равно добавить?.";
+                break;
+
             case "resp_ans_list":
                 $head = "Ответы респондента: " + $data[0];
                 $cont = "<table class='ans_list'>";
@@ -1157,6 +1163,10 @@ function message_ex($action,$type,$about,$data,$tags){
                             {
                                 switch ($about)
                                 {
+                                    case "qst_add_notice":
+                                        sendAJ("qst_add", JSON.stringify($data.form), "single");
+                                        break;
+
                                     case "resp_send_reminder":
                                     {
                                         // $data[1] - contains structure of all validly imported questions
@@ -1918,9 +1928,6 @@ function message_ex($action,$type,$about,$data,$tags){
                                 // ---------------------------------- TAGS ---------------------------------------------
                                 switch ($tags)
                                 {
-                                    case "qst_add_notice":
-                                        sendAJ("qst_add", JSON.stringify($data), "single");
-                                        break;
 
                                     case "force_qz_status":
                                         form = {};
