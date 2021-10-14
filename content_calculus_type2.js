@@ -1,17 +1,16 @@
 //   -------------------------------------------------------------------------------------------------------------------
-function report8_indicator(qz_ord, batch_ord, targ_qz_id) {
-    let qb_next, struct_next;
+function report2_comps_summ(qz_ord, batch_ord, targ_qz_id) {
     let qz = $ad.qzs[qz_ord];
     let group = qz.resps[batch_ord];
-    let line;
+    let resp_answers = []; // id of resp - qnt of answers present
 
     let qb = qz.settings.comm_groups[batch_ord].qb_id; // this is id
     qb = get_qb_ord_from_qb_id(qb); // this is ord
     qb = $ad.qbooks[qb]; // this is actuall qbook
     let qst_id_list = qb.list;
     let struct = qb.struct;
-    let avg_indic = {summ: 0, div: 0};
-    let avg_next_indic = {summ: 0, div: 0};
+    let qb_next, struct_next;
+
 
     let res = {
         summ: 0,
@@ -22,7 +21,7 @@ function report8_indicator(qz_ord, batch_ord, targ_qz_id) {
     };
 
     let qb_next_match = true, qb_valid = true, qb_next_valid = true;
-    /*
+/*
     Object.keys(struct.c_list).map(function(k) { // COMPETENTION
         if (null !== struct.c_list[k] && (!struct.c_list[k].hasOwnProperty("targ_avg") || null === struct.c_list[k].targ_avg))
             qb_valid = false;
@@ -64,8 +63,6 @@ function report8_indicator(qz_ord, batch_ord, targ_qz_id) {
     }
     */
 
-    let resp_answers = []; // id of resp - qnt of answers present
-
     let cid_list = get_comp_id_list_from_qst_list(qst_id_list);
     cid_list.forEach(function (v_cid) {
         res.gate += struct.c_list[v_cid].targ_avg; // The gate value for the current spec
@@ -76,8 +73,12 @@ function report8_indicator(qz_ord, batch_ord, targ_qz_id) {
             id: v_cid * 1,
             cat_list: {},
             wg: struct.c_list[v_cid].wg,
-            targ_avg: struct.c_list[v_cid].targ_avg
+            targ_avg: struct.c_list[v_cid].targ_avg,
+            targ_next: null
         };
+
+        if (targ_qz_id)
+            comp_slot.targ_next = struct_next.c_list[comp_slot.id].targ_avg;
 
         $cats_list_template.forEach(function (v_cat_id) { // CAT
             let cat_slot = {
@@ -88,6 +89,7 @@ function report8_indicator(qz_ord, batch_ord, targ_qz_id) {
                 resp_id_list: [],
                 valid_q_qnt: 0
             };
+
             qst_id_list.forEach(function (v_qid, i_qid) { // QST
                 let qst_ord = get_qst_ord_from_qst_id(v_qid);
                 if ($ad.qsts[qst_ord].comp_id === comp_slot.id) // related competention
@@ -106,22 +108,21 @@ function report8_indicator(qz_ord, batch_ord, targ_qz_id) {
                     //qst_slot.tx = $ad.qsts[q_ord].tx;
 
                     group.forEach(function (v_resp) { // RESP
-
                         if (!resp_answers.hasOwnProperty(v_resp.id) && !v_resp.ignore)
                             resp_answers[v_resp.id] = 0; // make the slot that count answers of each resp on any qst
 
                         // Resp had this qst
                         if (v_resp.cat_id === v_cat_id && !v_resp.ignore) // cat match
+
                         {
                             if (cat_slot.resp_id_list.indexOf(v_resp.id) === -1)
                                 cat_slot.resp_id_list.push(v_resp.id);
 
-                            let answer = v_resp.ans_list[i_qid];
                             if (struct.q_list[v_qid].cats[v_cat_id].is_on && // qst is on for this category
-                                calculus_ans_is_valid(answer) &&
-                                undefined !== answer)
+                                calculus_ans_is_valid(v_resp.ans_list[i_qid]) &&
+                                undefined !== v_resp.ans_list[i_qid])
                             {
-                                qst_slot.summ += answer;
+                                qst_slot.summ += v_resp.ans_list[i_qid];
                                 qst_slot.div++;
 
                                 qst_slot.resp_list.push(v_resp.ans_list[i_qid]);
@@ -141,9 +142,10 @@ function report8_indicator(qz_ord, batch_ord, targ_qz_id) {
 
                     // Get avg
                     if (qst_slot.div)
-                        qst_slot.summ = math_floor(qst_slot.summ / qst_slot.div, 2);
+                        qst_slot.summ_wg = math_floor((qst_slot.summ / qst_slot.div) * qst_slot.wg, 2);
                     //qst_slot.summ_wg = qst_slot.summ * qst_slot.wg;
                     cat_slot.q_list.push(qst_slot);
+                    cat_slot.summ += qst_slot.summ_wg;
 
                     if (qst_slot.div)
                         cat_slot.div++;
@@ -169,39 +171,39 @@ function report8_indicator(qz_ord, batch_ord, targ_qz_id) {
         res.summ += comp_slot.summ;
         res.div++;
     });
+    /*
+        Object.keys(struct.c_list).map(function(k) { // COMPETENTION
 
+        });
+        */
+    //if (res.div)
+    //    res.summ /= res.div;
 
     let global_colspan = 5;
     // BUILD TABLE
     // HEAD
     let head = "<tr>";
     let head_elems = [
-        "Индикаторы",
+        "Вес индикатора",
+        "самооценка: сумма баллов по компетенции с учетом веса",
+        "средняя по индикатору умнож на вес",
+        "руководители: сумма баллов по компетенции с учетом веса",
+        "средняя по индикатору умнож на вес",
+        "коллеги: сумма баллов по компетенции с учетом веса",
+        "средняя по индикатору умнож на вес",
+        "подчиненные: сумма баллов по компетенции с учетом веса",
+        "средняя по индикатору умнож на вес",
+        "смежная команда: сумма баллов по компетенции с учетом веса",
+        "средняя по индикатору умнож на вес",
 
-        "Самооценка",
-        "Средняя по индикатору по самооценке",
-
-        "Подчиненные",
-        "Средняя по индикатору по группе \"подчиненные\"",
-
-        "Коллеги",
-        "Средняя по индикатору по группе \"коллеги\"",
-
-        "Руководители",
-        "Средняя по индикатору по группе \"руководители\"",
-
-        "Смежная команда",
-        "Средняя по индикатору по группе \"смежная команда\"",
-
-        "Средний балл по индикатору среди всех групп респондентов кроме самооценки",
-
-        "проходной балл индикатора выбранной должности",
-        "Соответсвие выбранной должности  в %"
+        "Балл по компетенции по всем группам респ, исключ. самооценку",
+        "проходной балл компетенции выбранной должности",
+        "Соответсвие выбранной должности в %"
     ];
 
     if (targ_qz_id)
     {
-        head_elems.push("Целевой уровень следующей должности");
+        head_elems.push("целевой уровень следующей должности");
         head_elems.push("Соответсвие следующей должности в %");
         //global_colspan += 2;
     }
@@ -239,14 +241,17 @@ function report8_indicator(qz_ord, batch_ord, targ_qz_id) {
         console.log("sub_empty_cols", sub_empty_cols);
     }
 
-
+    console.log("cat_col_spans", duplicate(cat_col_spans));
     [0,3,4,5,1].forEach(function (v) {
         if (cat_col_spans.hasOwnProperty(v) &&
             cat_col_spans[v])
+        {
+            console.log("subbed cat_id: " + v +" " + (1 + cat_col_spans[v]));
             global_colspan += 1 + cat_col_spans[v];
+        }
+
     });
     console.log("global_colspan", global_colspan);
-
     /*
     let cat_col_spans = {
         0: 1,
@@ -265,37 +270,21 @@ function report8_indicator(qz_ord, batch_ord, targ_qz_id) {
         //if (cat_col_spans[id] < 1)
         //    cat_col_spans[id] = 1;
     });
-
-    let global_colspan = 1 + 1 + 4 + 1;
-    let resp_w = cat_col_spans[0] + cat_col_spans[3] +cat_col_spans[4] + cat_col_spans[5] + cat_col_spans[1]; // columns qnt for all the resp results
-    if (resp_w < 4)
-        global_colspan += 4;
-    else
-        global_colspan += resp_w;
+    console.log("cat_col_spans ", cat_col_spans);
     */
 
-
-    /*
-    console.log("sub_empty_cols");
-    console.log(sub_empty_cols);
-
-    console.log("cat_col_spans");
-    console.log(cat_col_spans);
-    console.log(res);
-    */
-
-    head += "<td>Компетенция</td>";
+    head += "<td></td>";
     head += "<td>"+ head_elems[0] +"</td>";
 
     if (cat_col_spans[0])
     {
-        head += "<td class='line_comp'>"+ head_elems[1] +"</td>"; // SELF
-        head += "<td>"+ head_elems[2] +"</td>";
+        head += "<td class='line_comp'>" + head_elems[1] + "</td>"; // SELF
+        head += "<td>" + head_elems[2] + "</td>";
     }
 
-    if (cat_col_spans[5])
+    if (cat_col_spans[4])
     {
-        head += "<td class='line_comp' colspan='"+ cat_col_spans[5] +"'>"+ head_elems[3] +"</td>"; // SLAVES (cat_col_spans[5] - sub_empty_cols[5])
+        head += "<td class='line_comp' colspan='"+ cat_col_spans[4] +"'>"+ head_elems[3] +"</td>"; // BOSS
         head += "<td>"+ head_elems[4] +"</td>";
     }
 
@@ -305,20 +294,19 @@ function report8_indicator(qz_ord, batch_ord, targ_qz_id) {
         head += "<td>"+ head_elems[6] +"</td>";
     }
 
-    if (cat_col_spans[4])
+    if (cat_col_spans[5])
     {
-        head += "<td class='line_comp' colspan='"+ cat_col_spans[4] +"'>"+ head_elems[7] +"</td>"; // BOSS
+        head += "<td class='line_comp' colspan='"+ cat_col_spans[5] +"'>"+ head_elems[7] +"</td>"; // SLAVES
         head += "<td>"+ head_elems[8] +"</td>";
     }
 
     if (cat_col_spans[1])
     {
-        head += "<td class='line_comp' colspan='"+ cat_col_spans[1] +"'>"+ head_elems[9] +"</td>"; // BOSS
+        head += "<td class='line_comp' colspan='"+ cat_col_spans[1] +"'>"+ head_elems[9] +"</td>"; // MERGERS
         head += "<td>"+ head_elems[10] +"</td>";
     }
 
-
-    head += "<td class='line_comp'>"+ head_elems[11] +"</td>";
+    head += "<td>"+ head_elems[11] +"</td>";
     head += "<td>"+ head_elems[12] +"</td>";
     head += "<td>"+ head_elems[13] +"</td>";
 
@@ -329,15 +317,77 @@ function report8_indicator(qz_ord, batch_ord, targ_qz_id) {
     }
     head += "</tr>";
 
-
-
+    let avg_pass_pct = {summ:0, div: 0}, avg_next_pass_pct = {summ:0, div: 0};
     let body = "";
+    let rowspan = 1 + Object.keys(struct.c_list).length + Object.keys(struct.q_list).length;
 
     res.comp_list.forEach(function (v_comp) {
         // ---   COMP LINE   ---
+        let line = "<tr class='line_comp'>";
         let com_ord = get_comp_ord_from_comp_id(v_comp.id);
         let comp_name = $ad.comps[com_ord].name;
-        let first_qst = true;
+
+        // COMPENTION LINE   ------------------------------------------------- + + +
+        line += "<td>Компетенция: <b>"+ comp_name +"</b></td>";
+        line += "<td></td>";
+
+        $cats_list_template.forEach(function (v_cat_id) {
+            if (cat_col_spans[v_cat_id]) // there is resps in that category
+            {
+                let cat_slot = v_comp.cat_list[v_cat_id];
+                let val = "";
+                if (cat_slot.div)
+                    val = cat_slot.summ;
+
+                /*
+                let new_colspan = cat_slot.resp_id_list.length;
+                if (v_cat_id)
+                    new_colspan -= sub_empty_cols[v_cat_id];
+                */
+                //line += "<td colspan='"+ global_colspan +"'>"+ val +"</td>";
+                line += "<td colspan='"+ cat_col_spans[v_cat_id] +"'>"+ val +"</td>";
+                line += "<td> </td>";
+            }
+        });
+
+        // RESULTING COMP GRADE ----------->
+        let q_qnt = 0; // calc qst qnt of this competention
+        qst_id_list.forEach(function (v_qid) {
+            let q_ord = get_qst_ord_from_qst_id(v_qid);
+            if ($ad.qsts[q_ord].comp_id === v_comp.id)
+                q_qnt++;
+        });
+        rowspan = 1 + q_qnt;
+
+        line += "<td white rowspan='"+ rowspan +"'>"+ calculus_colorize_pct(v_comp.summ, calculus_get_pct(v_comp.summ / v_comp.targ_avg)) +"</td>";
+        line += "<td white rowspan='"+ rowspan +"'>"+ v_comp.targ_avg +"</td>";
+
+        let pct = calculus_get_pct(math_floor(v_comp.summ / v_comp.targ_avg, 2));
+        if (pct)
+        {
+            avg_pass_pct.summ += pct;
+            avg_pass_pct.div++;
+        }
+        line += "<td white rowspan='"+ rowspan +"'>"+ calculus_colorize_pct(pct + "%", pct) +"</td>";
+
+        if (targ_qz_id)
+        {
+            //console.log("struct_next");
+            //console.log(struct_next);
+            //console.log("v_comp.id " + v_comp.id);
+            let targ_next = struct_next.c_list[v_comp.id].targ_avg;
+            line += "<td white rowspan='"+ rowspan +"'>"+ targ_next +"</td>"; // next grade
+
+            pct = calculus_get_pct(v_comp.summ / targ_next);
+            avg_next_pass_pct.summ += pct;
+            avg_next_pass_pct.div++;
+            line += "<td white rowspan='"+ rowspan +"'>"+ calculus_colorize_pct(pct + "%", pct) +"</td>"; // next grade %
+        }
+        // RESULTING COMP GRADE ----------->
+        line += "</tr>";
+        body += line;
+        // COMPENTION LINE END   ------------------------------------------------- + + +
+
         // INNER INDICATOR LINES   ------------------------------------------------- + + +
         qst_id_list.forEach(function (v_qid) {
 
@@ -345,25 +395,19 @@ function report8_indicator(qz_ord, batch_ord, targ_qz_id) {
             if ($ad.qsts[qst_ord].comp_id === v_comp.id)
             {
                 line = "<tr>";
-                if (first_qst)
-                {
-                    first_qst = false;
-                    line += "<td rowspan='"+ v_comp.cat_list[0].q_list.length +"'><b>"+ comp_name +"</b></td>"; // comp name
-                }
+                line += "<td>"+ $ad.qsts[qst_ord].tx +"</td>"; // tx
+                line += "<td>"+ struct.q_list[v_qid].wg +"</td>"; // wg
 
-                line += "<td style='text-align: left;'>"+ $ad.qsts[qst_ord].tx +"</td>"; // indicator's tx
-
-                [0,5,3,4,1].forEach(function (v_cat_id) {
-                    let q_list = v_comp.cat_list[v_cat_id].q_list;
-                    for (let q=0; q<q_list.length; q++)
-                        if (q_list[q].id === v_qid)
-                        {
-                            let resp_list = q_list[q].resp_list;
-                            let resp_id_list = q_list[q].resp_id_list;
-
-
-                            if (cat_col_spans[v_cat_id]) // there is resps in that category
+                $cats_list_template.forEach(function (v_cat_id) {
+                    if (cat_col_spans[v_cat_id]) // there is resps in that category
+                    {
+                        let q_list = v_comp.cat_list[v_cat_id].q_list;
+                        for (let q=0; q<q_list.length; q++)
+                            if (q_list[q].id === v_qid)
                             {
+                                let resp_list = q_list[q].resp_list;
+                                let resp_id_list = q_list[q].resp_id_list;
+
                                 if (!resp_list.length)
                                     line += "<td> </td>";
                                 else
@@ -375,141 +419,84 @@ function report8_indicator(qz_ord, batch_ord, targ_qz_id) {
                                             resp_answers.hasOwnProperty(resp_id)
                                         )
                                             resp_ans_qnt = resp_answers[resp_id];
+
+                                        //console.log("qid: " + v_qid + ", cid: "+ v_cat_id +", rid: "+ resp_id +", raq "+ resp_ans_qnt);
+
                                         if (null === resp_ans_qnt || resp_ans_qnt) // skip the whole column if no answers at all is present for this resp
                                             line += "<td>"+ v_resp_val +"</td>"; // value of each resp of this category for this question
                                         else
                                         if (!shrink_is_on)
                                             line += "<td></td>";
                                     });
+
                                 let v = "";
                                 if (q_list[q].div)
-                                {
-                                    v = q_list[q].summ; // show value only if any resps at all is present
-                                }
-
-                                //console.log("v is: " + v + "  struct.q_list[v_qid].targ is: "+  struct.q_list[v_qid].targ + " % is:" + calculus_get_pct(v / struct.q_list[v_qid].targ));
-                                line += "<td style='background-color: #fff6ed'>"+ calculus_colorize_pct(v, calculus_get_pct(v / struct.q_list[v_qid].targ)) +"</td>"; // avg-summ of all resps of this category for this indicator
+                                    v = q_list[q].summ_wg; // show value only if any resps at all is present
+                                line += "<td>"+ v +"</td>"; // avg-summ of all resps of this category for this indicator
+                                break;
                             }
+                    }
 
-                            // GRADE %
-                            if (1 === v_cat_id)
-                            {
-                                let targ = struct.q_list[v_qid].targ;
-                                if (null === targ)
-                                    targ = "<span style='font-size: 12px;'>нет данных</span>";
-
-                                let pct = 0;
-                                // Get avg for this indicator across all env categories
-                                let cats_avg_of_indic = 0;
-                                let cats_avg_of_indic_div = 0;
-                                [5,3,4].forEach(function (v_cid) {
-                                    if (v_comp.cat_list[v_cid].q_list[q].div)
-                                    {
-                                        cats_avg_of_indic += v_comp.cat_list[v_cid].q_list[q].summ;
-                                        cats_avg_of_indic_div++;
-                                    }
-                                });
-
-                                if (cats_avg_of_indic_div)
-                                {
-                                    cats_avg_of_indic = math_floor(cats_avg_of_indic / cats_avg_of_indic_div, 2);
-                                    pct = calculus_get_pct(cats_avg_of_indic / struct.q_list[v_qid].targ);
-                                    if (pct)
-                                    {
-                                        avg_indic.summ += pct;
-                                        avg_indic.div++;
-                                    }
-                                }
-                                line += "<td class='line_comp'>"+ cats_avg_of_indic +"</td>"; // avg for this indicator across all env categories
-                                line += "<td>"+ targ +"</td>";
-
-                                line += "<td>"+ calculus_colorize_pct(pct + "%", pct) +"</td>";
-
-                                if (targ_qz_id)
-                                {
-                                    targ = struct_next.q_list[v_qid].targ;
-                                    if (null === targ)
-                                        targ = "<span style='font-size: 12px;'>нет данных</span>";
-
-                                    line += "<td>"+ targ +"</td>";
-                                    pct = 0;
-                                    if (q_list[q].div)
-                                    {
-                                        pct = calculus_get_pct(q_list[q].summ / struct_next.q_list[v_qid].targ);
-                                        if (pct)
-                                        {
-                                            avg_next_indic.summ += pct;
-                                            avg_next_indic.div++;
-                                        }
-
-                                    }
-                                    line += "<td>"+ calculus_colorize_pct(pct + "%", pct) +"</td>";
-                                }
-                            }
-                            break;
-                        }
                 });
-
                 line += "</tr>";
                 body += line;
             }
+
         });
     });
 
-    if (!avg_indic.div) avg_indic.div = 1;
-    if (!avg_next_indic.div) avg_next_indic.div = 1;
+    /*
+    let resp_w = cat_col_spans[0] + cat_col_spans[3] + cat_col_spans[4] + cat_col_spans[5] + cat_col_spans[1]; // columns qnt for all the resp results
+    if (resp_w < 4)
+        global_colspan += 4;
+    else
+        global_colspan += resp_w;
+    */
 
-    line = "<tr>";
-    line += "<td style='background-color: #fff6ed' colspan='"+ (global_colspan - 2) +"'>Средний % соответствия по всем компетенциям</td>";
+    let line = "<tr>";
+    line += "<td colspan='"+ (global_colspan-3) +"' style='text-align: center; background-color: #fff6ed;'>Средний % соответствия по всем компетенциям</td>";
+    if (!avg_pass_pct.div)
+        avg_pass_pct.div = 1;
+    let pct = Math.floor(avg_pass_pct.summ / avg_pass_pct.div);
     line += "<td> </td>";
-    line += "<td style='background-color: #fff6ed'>"+ Math.floor(avg_indic.summ / avg_indic.div) +"%</td>";
+    line += "<td> </td>";
+    line += "<td style='background-color: #fff6ed;'>"+ calculus_colorize_pct(pct + "%", pct) +"</td>";
     if (targ_qz_id)
     {
+        pct = Math.floor(avg_next_pass_pct.summ / avg_next_pass_pct.div);
         line += "<td> </td>";
-        line += "<td style='background-color: #fff6ed'>"+ Math.floor(avg_next_indic.summ / avg_next_indic.div) +"%</td>";
+        line += "<td style='background-color: #fff6ed;'>"+ calculus_colorize_pct(pct + "%", pct) +"</td>";
     }
     line += "</tr>";
     body += line;
 
     if (!block_calculus_update) {
-        let t = "<table class='calculus' type='5'>" +
-            //"<td class='line_comp' colspan='"+ (1 + head_elems.length) +"'>Общая сумма баллов по всей оценке 360/  Сумма баллов всех компетенций по всем группам респондентов с учетом веса, без самооценки</td>" +
+        let t = "<table class='calculus' type='2'>" +
             head +
             body +
             "</table>";
         $(".calculus").remove();
         $(".calculus_wnd").append(t);
     }
-    // Export to table with styles and colspans
-    /*
-        $(".calculus").table2excel({
-            exclude:".noExl",
-            name:"Worksheet Name",
-            filename:"SomeFile",
-            fileext:".xls",
-            preserveColors:true
-        });
-    */
+
     return res;
 }
 
 
 
-
 //   -------------------------------------------------------------------------------------------------------------------
-function report8_indicator_resp(qz_ord, batch_ord, targ_qz_id) {
-    let qb_next, struct_next;
+function report2_comps_summ_resp(qz_ord, batch_ord, targ_qz_id) {
     let qz = $ad.qzs[qz_ord];
     let group = qz.resps[batch_ord];
-    let line;
+    let resp_answers = []; // id of resp - qnt of answers present
 
     let qb = qz.settings.comm_groups[batch_ord].qb_id; // this is id
     qb = get_qb_ord_from_qb_id(qb); // this is ord
     qb = $ad.qbooks[qb]; // this is actuall qbook
     let qst_id_list = qb.list;
     let struct = qb.struct;
-    let avg_indic = {summ: 0, div: 0};
-    let avg_next_indic = {summ: 0, div: 0};
+    let qb_next, struct_next;
+
 
     let res = {
         summ: 0,
@@ -561,7 +548,6 @@ function report8_indicator_resp(qz_ord, batch_ord, targ_qz_id) {
         return;
     }
     */
-    let resp_answers = []; // id of resp - qnt of answers present
 
     let cid_list = get_comp_id_list_from_qst_list(qst_id_list);
     cid_list.forEach(function (v_cid) {
@@ -573,8 +559,12 @@ function report8_indicator_resp(qz_ord, batch_ord, targ_qz_id) {
             id: v_cid * 1,
             cat_list: {},
             wg: struct.c_list[v_cid].wg,
-            targ_avg: struct.c_list[v_cid].targ_avg
+            targ_avg: struct.c_list[v_cid].targ_avg,
+            targ_next: null
         };
+
+        if (targ_qz_id)
+            comp_slot.targ_next = struct_next.c_list[comp_slot.id].targ_avg;
 
         $cats_list_template.forEach(function (v_cat_id) { // CAT
             let cat_slot = {
@@ -603,11 +593,9 @@ function report8_indicator_resp(qz_ord, batch_ord, targ_qz_id) {
                     //qst_slot.tx = $ad.qsts[q_ord].tx;
 
                     group.forEach(function (v_resp) { // RESP
-                        if (!resp_answers.hasOwnProperty(v_resp.id) && !v_resp.ignore)
-                            resp_answers[v_resp.id] = 0; // make the slot that count answers of each resp on any qst
-
                         // Resp had this qst
                         if (v_resp.cat_id === v_cat_id && !v_resp.ignore) // cat match
+
                         {
                             if (cat_slot.resp_id_list.indexOf(v_resp.id) === -1)
                                 cat_slot.resp_id_list.push(v_resp.id);
@@ -621,7 +609,6 @@ function report8_indicator_resp(qz_ord, batch_ord, targ_qz_id) {
 
                                 qst_slot.resp_list.push(v_resp.ans_list[i_qid]);
                                 qst_slot.resp_wg_list.push(v_resp.ans_list[i_qid] * qst_slot.wg);
-                                resp_answers[v_resp.id]++;
                             }
                             else
                             {
@@ -633,10 +620,10 @@ function report8_indicator_resp(qz_ord, batch_ord, targ_qz_id) {
 
                     // Get avg
                     if (qst_slot.div)
-                        qst_slot.summ = math_floor(qst_slot.summ / qst_slot.div, 2);
+                        qst_slot.summ_wg = math_floor((qst_slot.summ / qst_slot.div) * qst_slot.wg, 2);
                     //qst_slot.summ_wg = qst_slot.summ * qst_slot.wg;
                     cat_slot.q_list.push(qst_slot);
-                    cat_slot.summ += qst_slot.summ;// qst_slot.summ_wg;
+                    cat_slot.summ += qst_slot.summ_wg;
 
                     if (qst_slot.div)
                         cat_slot.div++;
@@ -662,44 +649,32 @@ function report8_indicator_resp(qz_ord, batch_ord, targ_qz_id) {
         res.summ += comp_slot.summ;
         res.div++;
     });
-    //if (res.div)
-    //    res.summ /= res.div;
 
-    let global_colspan = 5;
+
+    let global_colspan = 4;
     // BUILD TABLE
     // HEAD
     let head = "<tr>";
     let head_elems = [
-        "Индикаторы",
 
-        "Средняя по индикатору по самооценке",
-        "Средняя по индикатору по группе \"подчиненные\"",
-        "Средняя по индикатору по группе \"коллеги\"",
-        "Средняя по индикатору по группе \"руководители\"",
-        "Средняя по индикатору по группе \"смежная команда\"",
+        "самооценка: сумма баллов по компетенции с учетом веса",
+        "руководители: сумма баллов по компетенции с учетом веса",
+        "коллеги: сумма баллов по компетенции с учетом веса",
+        "подчиненные: сумма баллов по компетенции с учетом веса",
+        "смежная команда: сумма баллов по компетенции с учетом веса",
 
-        "Средний балл по индикатору среди всех групп респондентов кроме самооценки",
-
-        "Проходной балл индикатора выбранной должности",
-        "Соответсвие выбранной должности  в %"
+        "Балл по компетенции по всем группам респ, исключ. самооценку",
+        "проходной балл компетенции выбранной должности",
+        "Соответсвие выбранной должности в %"
     ];
 
     if (targ_qz_id)
     {
-        head_elems.push("Целевой уровень следующей должности");
+        head_elems.push("целевой уровень следующей должности");
         head_elems.push("Соответсвие следующей должности в %");
+        //global_colspan += 2;
     }
 
-    /*
-    let global_colspan = 1 + 1 + 4;
-    let cat_col_spans = {
-        0: 1,
-        4: res.comp_list[0].cat_list[4].resp_id_list.length,
-        3: res.comp_list[0].cat_list[3].resp_id_list.length,
-        5: res.comp_list[0].cat_list[5].resp_id_list.length,
-        1: res.comp_list[0].cat_list[1].resp_id_list.length,
-    };
-    */
     let cat_col_spans = {
         0: 0,
         4: 0,
@@ -719,194 +694,132 @@ function report8_indicator_resp(qz_ord, batch_ord, targ_qz_id) {
         });
     });
 
-    console.log("cat_col_spans", duplicate(cat_col_spans));
-    //console.log("res", res);
-
-    // by each cat_group decide by how many columns we need to shorten the table
-    if (shrink_is_on)
-    {
-        let sub_empty_cols = calc_empty_cat_columns({0:0,3:0,4:0,5:0,1:0}, group, resp_answers);
-        [0,3,4,5,1].forEach(function (id) {
-            if (cat_col_spans[id])
-                cat_col_spans[id] -= sub_empty_cols[id];
-        });
-        console.log("sub_empty_cols", sub_empty_cols);
-    }
-
-    console.log("short: cat_col_spans, after ", duplicate(cat_col_spans));
-
+    console.log("short: cat_col_spans", duplicate(cat_col_spans));
     [0,3,4,5,1].forEach(function (v) {
         if (cat_col_spans.hasOwnProperty(v) &&
             cat_col_spans[v])
-            global_colspan += 1; //cat_col_spans[v];
+        {
+            console.log("short: subbed cat_id: " + v +" " + (1 + cat_col_spans[v]));
+            global_colspan += 1;
+        }
+
     });
-    console.log("global_colspan", global_colspan);
+    console.log("short: global_colspan", global_colspan);
+    /*
+    let cat_col_spans = {
+        0: 1,
+        4: res.comp_list[0].cat_list[4].resp_id_list.length,
+        3: res.comp_list[0].cat_list[3].resp_id_list.length,
+        5: res.comp_list[0].cat_list[5].resp_id_list.length,
+        1: res.comp_list[0].cat_list[1].resp_id_list.length,
+    };
+    */
 
-
-    head += "<td class='line_comp'>Компетенция</td>";
-    head += "<td class='line_comp'>"+ head_elems[0] +"</td>";
+    head += "<td></td>";
 
     if (cat_col_spans[0])
-    {
-        head += "<td class='line_comp'>" + head_elems[1] + "</td>"; // SELF
-    }
-
-    if (cat_col_spans[5])
-    {
-        head += "<td class='line_comp'>"+ head_elems[2] +"</td>"; // BOSS
-    }
-
-    if (cat_col_spans[3])
-    {
-        head += "<td class='line_comp'>"+ head_elems[3] +"</td>"; // COLLEAGUE
-    }
+        head += "<td>"+ head_elems[0] +"</td>"; // SELF
 
     if (cat_col_spans[4])
-    {
-        head += "<td class='line_comp'>"+ head_elems[4] +"</td>"; // SLAVES
-    }
-
+        head += "<td>"+ head_elems[1] +"</td>"; // BOSS
+    if (cat_col_spans[3])
+        head += "<td>"+ head_elems[2] +"</td>"; // COLLEAGUE
+    if (cat_col_spans[5])
+        head += "<td>"+ head_elems[3] +"</td>"; // SLAVES
     if (cat_col_spans[1])
-    {
-        head += "<td class='line_comp'>"+ head_elems[5] +"</td>"; // MERGERS
-    }
+        head += "<td>"+ head_elems[4] +"</td>"; // MERGES
 
-    head += "<td class='line_comp'>"+ head_elems[6] +"</td>";
+    head += "<td>"+ head_elems[5] +"</td>";
+    head += "<td>"+ head_elems[6] +"</td>";
     head += "<td>"+ head_elems[7] +"</td>";
-    head += "<td>"+ head_elems[8] +"</td>";
 
     if (targ_qz_id)
     {
+        head += "<td>"+ head_elems[8] +"</td>";
         head += "<td>"+ head_elems[9] +"</td>";
-        head += "<td>"+ head_elems[10] +"</td>";
     }
     head += "</tr>";
 
+    let avg_pass_pct = {summ:0, div: 0}, avg_next_pass_pct = {summ:0, div: 0};
     let body = "";
+    let rowspan = 1 + Object.keys(struct.c_list).length;
 
     res.comp_list.forEach(function (v_comp) {
         // ---   COMP LINE   ---
+        let line = "<tr>";
         let com_ord = get_comp_ord_from_comp_id(v_comp.id);
         let comp_name = $ad.comps[com_ord].name;
-        let first_qst = true;
-        // INNER INDICATOR LINES   ------------------------------------------------- + + +
-        qst_id_list.forEach(function (v_qid) {
 
-            let qst_ord = get_qst_ord_from_qst_id(v_qid);
-            if ($ad.qsts[qst_ord].comp_id === v_comp.id)
+        // COMPENTION LINE   ------------------------------------------------- + + +
+        line += "<td class='line_comp'>Компетенция: <b>"+ comp_name +"</b></td>";
+
+        [0,4,3,5,1].forEach(function (v_cat_id) {
+            if (cat_col_spans[v_cat_id])
             {
-                line = "<tr>";
-                if (first_qst)
-                {
-                    first_qst = false;
-                    line += "<td rowspan='"+ v_comp.cat_list[0].q_list.length +"'><b>"+ comp_name +"</b></td>"; // comp name
-                }
+                let cat_slot = v_comp.cat_list[v_cat_id];
+                let val = "";
+                if (cat_slot.div)
+                    val = cat_slot.summ;
 
-                line += "<td style='text-align: left;'>"+ $ad.qsts[qst_ord].tx +"</td>"; // indicator's tx
-
-                [0,5,3,4,1].forEach(function (v_cat_id) {
-                    let q_list = v_comp.cat_list[v_cat_id].q_list;
-                    for (let q=0; q<q_list.length; q++)
-                        if (q_list[q].id === v_qid)
-                        {
-                            if (cat_col_spans[v_cat_id]) // there is resps in that category
-                            {
-                                let v = "";
-                                if (q_list[q].div)
-                                    v = q_list[q].summ; // show value only if any resps at all is present
-
-                                line += "<td style='background-color: #fff6ed'>"+ calculus_colorize_pct(v, calculus_get_pct(v / struct.q_list[v_qid].targ)) +"</td>"; // avg-summ of all resps of this category for this indicator
-                            }
-
-                            // GRADE %
-                            if (1 === v_cat_id)
-                            {
-                                let targ = struct.q_list[v_qid].targ;
-                                if (null === targ)
-                                    targ = "<span style='font-size: 12px;'>нет данных</span>";
-
-
-                                let pct = 0;
-                                // Get avg for this indicator across all env categories
-                                let cats_avg_of_indic = 0;
-                                let cats_avg_of_indic_div = 0;
-                                [5,3,4,1].forEach(function (v_cid) {
-                                    if (v_comp.cat_list[v_cid].q_list[q].div)
-                                    {
-                                        cats_avg_of_indic += v_comp.cat_list[v_cid].q_list[q].summ;
-                                        cats_avg_of_indic_div++;
-                                    }
-                                });
-
-                                if (cats_avg_of_indic_div)
-                                {
-                                    cats_avg_of_indic = math_floor(cats_avg_of_indic / cats_avg_of_indic_div, 2);
-                                    pct = calculus_get_pct(cats_avg_of_indic / struct.q_list[v_qid].targ);
-                                    if (pct)
-                                    {
-                                        avg_indic.summ += pct;
-                                        avg_indic.div++;
-                                    }
-                                }
-                                line += "<td class='line_comp'>"+ cats_avg_of_indic +"</td>"; // avg for this indicator across all env categories
-                                line += "<td>"+ targ +"</td>";
-
-                                line += "<td>"+ calculus_colorize_pct(pct + "%", pct) +"</td>";
-
-                                if (targ_qz_id)
-                                {
-                                    targ = struct_next.q_list[v_qid].targ;
-                                    if (null === targ)
-                                        targ = "<span style='font-size: 12px;'>нет данных</span>";
-
-                                    line += "<td>"+ targ +"</td>";
-                                    pct = 0;
-                                    if (q_list[q].div)
-                                    {
-
-                                        pct = calculus_get_pct(q_list[q].summ / struct_next.q_list[v_qid].targ);
-                                        if (pct)
-                                        {
-                                            avg_next_indic.summ += pct;
-                                            avg_next_indic.div++;
-                                        }
-
-                                    }
-                                    line += "<td>"+ calculus_colorize_pct(pct + "%", pct) +"</td>";
-                                }
-                            }
-                            break;
-                        }
-                });
-                line += "</tr>";
-                body += line;
+                line += "<td>"+ val +"</td>";
             }
         });
+
+        // RESULTING COMP GRADE ----------->
+        rowspan = 1;
+        line += "<td white rowspan='"+ rowspan +"'>"+ calculus_colorize_pct(v_comp.summ, calculus_get_pct(v_comp.summ / v_comp.targ_avg)) +"</td>";
+        line += "<td white rowspan='"+ rowspan +"'>"+ v_comp.targ_avg +"</td>";
+
+        let pct = calculus_get_pct(v_comp.summ / v_comp.targ_avg);
+        if (pct)
+        {
+            avg_pass_pct.summ += pct;
+            avg_pass_pct.div++;
+        }
+        line += "<td white rowspan='"+ rowspan +"'>"+ calculus_colorize_pct(pct + "%", pct) +"</td>";
+
+        if (targ_qz_id)
+        {
+            let targ_next = struct_next.c_list[v_comp.id].targ_avg;
+            line += "<td white rowspan='"+ rowspan +"'>"+ targ_next +"</td>"; // next grade
+
+            pct = calculus_get_pct(math_floor(v_comp.summ / targ_next, 2));
+            avg_next_pass_pct.summ += pct;
+            avg_next_pass_pct.div++;
+            line += "<td white rowspan='"+ rowspan +"'>"+ calculus_colorize_pct(pct + "%", pct) +"</td>"; // next grade %
+        }
+        // RESULTING COMP GRADE ----------->
+        line += "</tr>";
+        body += line;
+        // COMPENTION LINE END   ------------------------------------------------- + + +
     });
 
-    if (!avg_indic.div) avg_indic.div = 1;
-    if (!avg_next_indic.div) avg_next_indic.div = 1;
 
-    line = "<tr style='font-weight: bold; text-align: center;'>";
-    line += "<td style='background-color: #fff6ed;' colspan='"+ (global_colspan - 3) +"'>Средний % соответствия по всем компетенциям</td>";
+    let line = "<tr>";
+    line += "<td colspan='"+ (global_colspan-3) +"' style='text-align: center; background-color: #fff6ed;'>Средний % соответствия по всем компетенциям</td>";
+    if (!avg_pass_pct.div)
+        avg_pass_pct.div = 1;
+    let pct = Math.floor(avg_pass_pct.summ / avg_pass_pct.div);
     line += "<td> </td>";
     line += "<td> </td>";
-    line += "<td style='background-color: #fff6ed;'>"+ Math.floor(avg_indic.summ / avg_indic.div) +"%</td>";
+    line += "<td style='background-color: #fff6ed;'>"+ calculus_colorize_pct(pct + "%", pct) +"</td>";
     if (targ_qz_id)
     {
+        pct = Math.floor(avg_next_pass_pct.summ / avg_next_pass_pct.div);
         line += "<td> </td>";
-        line += "<td style='background-color: #fff6ed;'>"+ Math.floor(avg_next_indic.summ / avg_next_indic.div) +"%</td>";
+        line += "<td style='background-color: #fff6ed;'>"+ calculus_colorize_pct(pct + "%", pct) +"</td>";
     }
     line += "</tr>";
     body += line;
 
     if (!block_calculus_update) {
-        let t = "<table class='calculus' type='5' resp>" +
+        let t = "<table class='calculus' type='2' resp>" +
             head +
             body +
             "</table>";
         $(".calculus").remove();
         $(".calculus_wnd").append(t);
     }
+
     return res;
 }

@@ -110,7 +110,7 @@ function report6_indicator_env(qz_ord, batch_ord, targ_qz_id) {
                     //qst_slot.tx = $ad.qsts[q_ord].tx;
 
                     group.forEach(function (v_resp) { // RESP
-                        if (!resp_answers.hasOwnProperty(v_resp.id))
+                        if (!resp_answers.hasOwnProperty(v_resp.id) && !v_resp.ignore)
                             resp_answers[v_resp.id] = 0; // make the slot that count answers of each resp on any qst
 
                         // Resp had this qst
