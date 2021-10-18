@@ -677,8 +677,18 @@ function sendAJ($tag,$data) {
                     if ($ajResponse[z].responseText)
                     {
                         $saveans_countdown = true;
-                        map.next_step(); // saved successfully — moving on
+
                         $ctrl_block = false;
+
+                        if ("qz_ended" === $ajResponse[z].responseText)
+                        {
+                            $clidata.error = "Опрос уже завершен.";
+                            map.window_set("qst","hide");
+                            map.window_set("feedback","hide");
+                            map.start_screen();
+                        }
+                        else
+                            map.next_step(); // saved successfully — moving on
                     }
                     else
                         message_ex("show","info","direct","Не удалось сохранить данные.<br>При повторе ошибки обратитесь в техподдержку.");
@@ -727,8 +737,20 @@ function sendAJ($tag,$data) {
             .done(function () {
                 if ($ajResponse[z].readyState === 4 && $ajResponse[z].status === 200)
                 {
-                    map.next_step();
-                    console.log("feedback saved");
+                    if ("qz_ended" === $ajResponse[z].responseText)
+                    {
+
+                        $clidata.error = "Опрос уже завершен.";
+                        map.window_set("qst","hide");
+                        map.window_set("feedback","hide");
+                        map.start_screen();
+                    }
+                    else
+                    {
+                        map.next_step();
+                        console.log("feedback saved");
+                    }
+
                 }
             })
             // -------------------------------------------------------------------------------------

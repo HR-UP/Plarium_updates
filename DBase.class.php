@@ -1758,7 +1758,7 @@ class DBase{
                             $sett = $qz["settings"];
                             // Get answers_set
                             $ans["answer_opts_list"] = $sett["answer_opts_list"];
-
+                            $ans["status"] = $qz["status"];
 
                             if (1 === $qz["status"] * 1)
                                 $ans["error"] = "Опрос уже завершен.";
@@ -2183,7 +2183,7 @@ class DBase{
                     */
 
                     // Main DB answer record
-                    $q = $this->send_query("SELECT resps, settings, madeby FROM quiz WHERE qkey = '". $d->qkey ."'");
+                    $q = $this->send_query("SELECT resps, settings, madeby, status FROM quiz WHERE qkey = '". $d->qkey ."'");
                     if ($q)
                     {
                         $data = $q->fetchAll(PDO::FETCH_ASSOC);
@@ -2192,38 +2192,46 @@ class DBase{
                             $ans = false;
                         else
                         {
-                            //file_put_contents($file, " \n qz count match: ", FILE_APPEND);
-                            $settings = true_json_code($data[0]["settings"], "decode");
-                            $resps = true_json_code($data[0]["resps"], "decode");
                             $pers_id = $data[0]["madeby"] * 1;
-                            $QBOOKS = $this->qbook("list", "no_recon", $pers_id);
-                            $this->question("list", false, false, $pers_id); // refreshes  qsts db, sets into the session
-                            $QSTS = $_SESSION['qsts'];
+                            $status = intval($data[0]["status"]);
 
-                            // Record the currents answer
-                            $resp = &$resps[$d->group_ord][$d->resp_ord];
-                            if (isset($d->map_step))
-                                $resp["map_step"] = $d->map_step;
-                            if (isset($d->map_len))
-                                $resp["map_len"] = $d->map_len;
-                            //$resp["ans_list"] = $d->ans_list; // fully rewrite results
-                            $resp["ans_list"][$d->qst_ord] = $d->pts; // record user answer value
-                            for ($i=0; $i<count($resp["ans_list"]); $i++)
-                                if (null === $resp["ans_list"][$i])
-                                    $resp["ans_list"][$i] = -1; // absent answer, cuz it's blocked for this resp's category (or for other reasons)
+                            if (1 !== $status)
+                            {
+                                //$settings = true_json_code($data[0]["settings"], "decode");
+                                $resps = true_json_code($data[0]["resps"], "decode");
+                                //$QBOOKS = $this->qbook("list", "no_recon", $pers_id);
+                                //$this->question("list", false, false, $pers_id); // refreshes  qsts db, sets into the session
+                                //$QSTS = $_SESSION['qsts'];
 
-                            $proper_array = []; // when array saves value at indexes not in strict order, it becomes assoc type, we redo it to index type by this
-                            for ($i=0; $i<count($resp["ans_list"]); $i++)
-                                array_push($proper_array, $resp["ans_list"][$i]);
-                            $resp["ans_list"] = $proper_array;
+                                // Record the currents answer
+                                $resp = &$resps[$d->group_ord][$d->resp_ord];
+                                if (isset($d->map_step))
+                                    $resp["map_step"] = $d->map_step;
+                                if (isset($d->map_len))
+                                    $resp["map_len"] = $d->map_len;
+                                //$resp["ans_list"] = $d->ans_list; // fully rewrite results
+                                $resp["ans_list"][$d->qst_ord] = $d->pts; // record user answer value
+                                for ($i=0; $i<count($resp["ans_list"]); $i++)
+                                    if (null === $resp["ans_list"][$i])
+                                        $resp["ans_list"][$i] = -1; // absent answer, cuz it's blocked for this resp's category (or for other reasons)
 
-                            $resp["last_upd"] = time();
+                                $proper_array = []; // when array saves value at indexes not in strict order, it becomes assoc type, we redo it to index type by this
+                                for ($i=0; $i<count($resp["ans_list"]); $i++)
+                                    array_push($proper_array, $resp["ans_list"][$i]);
+                                $resp["ans_list"] = $proper_array;
 
-                            // Update info in DB
-                            $resps = true_json_code($resps);
-                            //file_put_contents($file, " \n before qz update: ", FILE_APPEND);
-                            $this->send_query("UPDATE quiz SET resps = '$resps' WHERE qkey = '". $d->qkey ."'");
-                            $ans = true;
+                                $resp["last_upd"] = time();
+
+                                // Update info in DB
+                                $resps = true_json_code($resps);
+                                //file_put_contents($file, " \n before qz update: ", FILE_APPEND);
+                                $this->send_query("UPDATE quiz SET resps = '$resps' WHERE qkey = '". $d->qkey ."'");
+                                $ans = true;
+                            }
+                            else
+                            {
+                                $ans = "qz_ended";
+                            }
                         }
                     }
                     //file_put_contents($file, " \n answer is: ". $ans, FILE_APPEND);
@@ -2240,7 +2248,7 @@ class DBase{
                     //http://evaluation.plarium.local/answers_backup/feedback_q_QWwyt_r_CadoG.txt
                     file_put_contents(BACKUP_ANSWERS_DIR . "/feedback_q_". $d->qkey ."_r_".$d->rkey .".txt", json_encode($d->feedback, JSON_UNESCAPED_UNICODE));
 
-                    $q = $this->send_query("SELECT resps, settings, madeby FROM quiz WHERE qkey = '". $d->qkey ."'");
+                    $q = $this->send_query("SELECT resps, settings, madeby, status FROM quiz WHERE qkey = '". $d->qkey ."'");
                     if ($q)
                     {
                         $data = $q->fetchAll(PDO::FETCH_ASSOC);
@@ -2248,26 +2256,36 @@ class DBase{
                             $ans = false;
                         else
                         {
-                            $settings = true_json_code($data[0]["settings"], "decode");
-                            $resps = true_json_code($data[0]["resps"], "decode"); // proper decode json
-                            $pers_id = $data[0]["madeby"] * 1;
-                            $QBOOKS = $this->qbook("list", "no_recon", $pers_id);
-                            $this->question("list", false, false, $pers_id); // refreshes  qsts db, sets into the session
-                            $QSTS = $_SESSION['qsts'];
+                            $status = intval($data[0]["status"]);
 
-                            $resp = &$resps[$d->group_ord][$d->resp_ord];
-                            $resp["feedback"] = $d->feedback; // record user feedback answers
-                            $resp["last_upd"] = time();
-                            if (isset($d->map_step))
-                                $resp["map_step"] = $d->map_step;
-                            if (isset($d->map_len))
-                                $resp["map_len"] = $d->map_len;
+                            if (1 !== $status)
+                            {
+                                //$settings = true_json_code($data[0]["settings"], "decode");
+                                $resps = true_json_code($data[0]["resps"], "decode"); // proper decode json
+                                //$pers_id = $data[0]["madeby"] * 1;
+                                //$QBOOKS = $this->qbook("list", "no_recon", $pers_id);
+                                //$this->question("list", false, false, $pers_id); // refreshes  qsts db, sets into the session
+                                //$QSTS = $_SESSION['qsts'];
 
-                            $resps = true_json_code($resps); // proper encode json
+                                $resp = &$resps[$d->group_ord][$d->resp_ord];
+                                $resp["feedback"] = $d->feedback; // record user feedback answers
+                                $resp["last_upd"] = time();
+                                if (isset($d->map_step))
+                                    $resp["map_step"] = $d->map_step;
+                                if (isset($d->map_len))
+                                    $resp["map_len"] = $d->map_len;
 
-                            // Update info in DB
-                            $this->send_query("UPDATE quiz SET resps = '$resps' WHERE qkey = '". $d->qkey ."'");
-                            $ans = true;
+                                $resps = true_json_code($resps); // proper encode json
+
+                                // Update info in DB
+                                $this->send_query("UPDATE quiz SET resps = '$resps' WHERE qkey = '". $d->qkey ."'");
+                                $ans = true;
+                            }
+                            else
+                            {
+                                $ans = "qz_ended";
+                            }
+
                         }
                     }
 
