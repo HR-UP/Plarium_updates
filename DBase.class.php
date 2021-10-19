@@ -1817,13 +1817,28 @@ class DBase{
                                         if (isset($fb["qz_list"]) && count($fb["qz_list"]))
                                             foreach ($fb["qz_list"] as $i => $qz_comment)
                                             {
-                                                if (isset($fb["qz_cats_list"]) &&
-                                                    isset($fb["qz_cats_list"][$i]) &&
-                                                    isset($fb["qz_cats_list"][$i][$cid]) &&
-                                                    isset($fb["qz_cats_list"][$i][$cid]["is_on"])
-                                                )
+                                                // Check if this is  new update system or old
+                                                $pass = false;
+                                                $role_specs_exist = true;
+
+                                                if (isset($fb["qz_cats_list"]))
                                                 {
-                                                    if ($fb["qz_cats_list"][$i][$cid]["is_on"]*1)  // comment is disabled for this role
+                                                    if (isset($fb["qz_cats_list"][$i]) &&
+                                                        isset($fb["qz_cats_list"][$i][$cid]) &&
+                                                        isset($fb["qz_cats_list"][$i][$cid]["is_on"])
+                                                    )
+                                                        $pass = true;
+                                                }
+                                                else
+                                                {
+                                                    $pass = true;
+                                                    $role_specs_exist = false;
+                                                }
+
+
+                                                if ($pass)
+                                                {
+                                                    if (!$role_specs_exist || $fb["qz_cats_list"][$i][$cid]["is_on"]*1)  // comment is disabled for this role
                                                     {
                                                         $map_slot = array(
                                                             "type" => "comment",
@@ -1831,7 +1846,8 @@ class DBase{
                                                             "ord" => count($resulting_list)
                                                         );
                                                         array_push($map_qz_after_block, $map_slot);
-                                                        if ($fb["qz_cats_list"][$i][$cid]["tx"]) // swap desc to role-specific
+                                                        if ($role_specs_exist &&
+                                                            $fb["qz_cats_list"][$i][$cid]["tx"]) // swap desc to role-specific
                                                         {
                                                             $new_dec_comment = $fb["qz_cats_list"][$i][$cid]["tx"];
                                                             array_push($resulting_list, $new_dec_comment);
@@ -1866,16 +1882,29 @@ class DBase{
 
                                                 foreach ($comp as $i => $comp_comment)
                                                 {
-                                                    if ($comp_cat_slot_exists &&
-                                                        isset($fb["comp_cats_list"][$comp_id][$i]) &&
-                                                        isset($fb["comp_cats_list"][$comp_id][$i][$cid]) &&
-                                                        isset($fb["comp_cats_list"][$comp_id][$i][$cid]["is_on"])
-                                                    )
-                                                    {
-                                                        $comp_cat_slot = $fb["comp_cats_list"][$comp_id][$i][$cid];
-                                                        if (1 === $comp_cat_slot["is_on"]*1) // comment is disabled for this role
-                                                        {
+                                                    // Check if this is  new update system or old
+                                                    $pass = false;
 
+                                                    if ($comp_cat_slot_exists)
+                                                    {
+                                                        if (isset($fb["comp_cats_list"][$comp_id][$i]) &&
+                                                            isset($fb["comp_cats_list"][$comp_id][$i][$cid]) &&
+                                                            isset($fb["comp_cats_list"][$comp_id][$i][$cid]["is_on"])
+                                                        )
+                                                            $pass = true;
+                                                    }
+                                                    else
+                                                        $pass = true;
+
+                                                    if ($pass)
+                                                    {
+                                                        $comp_cat_slot = null;
+                                                        if ($comp_cat_slot_exists)
+                                                            $comp_cat_slot = $fb["comp_cats_list"][$comp_id][$i][$cid];
+
+                                                        if (!$comp_cat_slot_exists ||
+                                                            1 === $comp_cat_slot["is_on"]*1) // comment is disabled for this role
+                                                        {
                                                             // Fill competentions slot
                                                             if (!isset($map_comps_block[$comp_id]))
                                                                 $map_comps_block[$comp_id] = array();
@@ -1888,7 +1917,8 @@ class DBase{
                                                             );
                                                             array_push($map_comps_block[$comp_id], $map_slot);
 
-                                                            if ($comp_cat_slot["tx"]) // swap desc to role-specific
+                                                            if ($comp_cat_slot_exists &&
+                                                                $comp_cat_slot["tx"]) // swap desc to role-specific
                                                             {
                                                                 $new_dec_comment = $comp_cat_slot["tx"];
                                                                 array_push($resulting_list, $new_dec_comment);
