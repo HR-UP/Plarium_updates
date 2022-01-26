@@ -3280,7 +3280,7 @@ class DBase{
             if ("no_recon" !== $mode)
                 $this->DB_close($q);
 
-            
+
             // Fix indexation errors
             file_put_contents("dires_index_corrector.txt", "start \n");
             if (count($stack))
@@ -3620,6 +3620,7 @@ class DBase{
         if ($action === "list")
         {
             file_put_contents("qz_stat_chk.txt", "");
+            file_put_contents("resp_rec_chk.txt", "", FILE_APPEND);
             // Get all the feedback comments
             $comments = array();
             if (file_exists(COMMENTS_FILE))
@@ -3751,6 +3752,7 @@ class DBase{
                         $resps_qnt = 0;
                         $resps_done = 0;
                         $chk_slot = [];
+                        $chk_slot["qz_id"] = $bro["id"];
                         $chk_slot["resps"] = $bro["resps"];
                         $chk_slot["resps"] = true_json_code($chk_slot["resps"]);
                         $chk_slot["resps"] = true_json_code($chk_slot["resps"], "decode");
@@ -3787,7 +3789,7 @@ class DBase{
                     }
 
                     // Recalculated status don't corresponds to current one
-                    if ($qz_status !== $bro["status"]*1 && // can oly complete quiz, not uncomplete
+                    if ($qz_status !== $bro["status"]*1 && // can oтly complete quiz, not uncomplete
                         (0 === $bro["status"]*1 && !$bro["is_fixed"])) // can only mod status if quiz wasn't uncompleted manually
                     {
                         $bro["status"] = $qz_status;
@@ -4090,7 +4092,8 @@ class DBase{
                 $this->send_query("UPDATE quiz SET status = '" . $d->status . "', ud = '". time() ."' WHERE id = '". $d->qz_id ."'");
                 return true;
             }
-            else return false;
+            else
+                return false;
         }
 
         elseif ($action === "qz_mute")
@@ -4398,71 +4401,6 @@ class DBase{
                 }
                 //file_put_contents("tester_mail_cjk.txt", "\n should not be here:", FILE_APPEND);
             }
-        }
-
-
-        // Прием входящих ответов от респондентов
-        elseif ($action === "collectData")
-        {
-            $date = time();
-            $data = json_decode($_POST["data"]);
-            $qst_val = $data[0]*1;
-            // порядковый индекс вопросного блока
-            $qst_ord = $data[1]*1;
-            $prj_key = $data[2];
-            $u_key = $data[3];
-
-            $collector = null;
-            $res = $this->send_query("SELECT u_keys, results, resp_uDate FROM quiz WHERE p_key = '$prj_key'");
-            if ($res)
-                while ($bro = $res->fetch(PDO::FETCH_ASSOC))
-                    $collector = $bro;
-
-            if ($collector)
-            {
-                $collector[0] = explode(",",$collector[0]);
-                $collector[1] = explode("#",$collector[1]);
-                for ($i=0; $i<count($collector[1]); $i++)
-                    $collector[1][$i] = explode(",",$collector[1][$i]);
-                // массив времен обновления респондентов
-                $collector[2] = explode(",",$collector[2]);
-
-                // порядковый индекс юзерного блока
-                $uord = array_search($u_key,$collector[0]);
-
-                // ОБНОВИТЬ
-                // время
-                $collector[2][$uord] = $date;
-                $collector[2] = implode(",",$collector[2]);
-                // результаты (записать результат только если вопрос не был ранее отвечен)
-                if ($collector[1][$uord][$qst_ord]*1 === -1)
-                    $collector[1][$uord][$qst_ord] = $qst_val;
-
-
-                // Если больше нет неотвеченных вопросов - завершить проект
-                $unanswered_qnt = 0;
-                foreach ($collector[1] as $ansBlock)
-                    foreach ($ansBlock as $ansVal)
-                        if ($ansVal*1 === -1)
-                            $unanswered_qnt++;
-
-                // Больше нет неотвеченых вопросов - завершить проект
-                if ($unanswered_qnt === 0)
-                    $status = 2;
-                else
-                    $status = 1;
-
-                // Запаковать все ответы в строку (лимит 10000 знаков)
-                for ($i=0; $i<count($collector[1]); $i++)
-                    $collector[1][$i] = implode(",",$collector[1][$i]);
-                $collector[1] = implode("#",$collector[1]);
-                // Запихать обновленные данные обратно
-                $this->send_query("UPDATE quiz SET results = '$collector[1]', resp_uDate = '$collector[2]', status = '$status' WHERE p_key = '$prj_key'");
-            }
-
-            if ($reconn)
-                $this->DB_close($q);
-            return true;
         }
 
     }
