@@ -3912,7 +3912,7 @@ class DBase{
 
 
                         foreach ($RESPS as $db_resp)
-                            if ($db_resp['id'] === $resp["id"])
+                            if (intval($db_resp['id']) === intval($resp["id"]))
                             {
                                 $resp_mail = mb_strtolower($db_resp["mail"]);
                                 $resp_fio = $db_resp["fio"];
