@@ -1681,7 +1681,10 @@ class DBase{
                         }
                         else
                         {
-                            log_add("duplicated key pairs found: " . implode(" || ", $duplicate_quizes));
+                            if (count($qz_list))
+                                log_add("duplicated key pairs found: " . implode(" || ", $duplicate_quizes));
+                            else
+                                log_add("empty qz_list to get resp data from: " . implode(" || ", $duplicate_quizes));
                             $ans["error"] = "Не уникальный id опроса.";
                         }
                     }
@@ -3844,10 +3847,12 @@ class DBase{
             $mailer_focus_name_list = array();
 
             // Set all needed attributes for each resp in every focus group + get info on multi-links to same resp
+
+            $RESPS = $this->resp("list", $owner_id, false); // Regather resps ?
             foreach ($qz["resps"] as $gr_ord => &$group)
             {
                 $focus_name = "";
-                foreach ($_SESSION["resps"] as $db_resp)
+                foreach ($RESPS as $db_resp)
                     if ($db_resp['id'] === $group[0]["id"])
                     {
                         $focus_name = $db_resp["fio"];
@@ -3894,8 +3899,7 @@ class DBase{
             // Send invites (letters are grouped by unique respondent)
             if (!IS_LOCAL)
             {
-                file_put_contents("mailer_list_check", json_encode($mailer_list));
-                (!isset($_SESSION["resps"]) ? $this->resp("list", null, false) : false);
+                file_put_contents("mailer_list_check.txt", json_encode($mailer_list));
                 $sent_letters_bank = array();
                 // Send invites to resps (letters are grouped by unique respondent id's)
                 foreach ($qz["resps"] as $gr_ord => &$group)
@@ -3906,7 +3910,8 @@ class DBase{
                         $resp_mail = "";
                         $resp_fio = "";
 
-                        foreach ($_SESSION["resps"] as $db_resp)
+
+                        foreach ($RESPS as $db_resp)
                             if ($db_resp['id'] === $resp["id"])
                             {
                                 $resp_mail = mb_strtolower($db_resp["mail"]);
@@ -3924,7 +3929,7 @@ class DBase{
                             $btn_name = $btn_name[1];
 
                             $link = "";
-                            file_put_contents("mailer_list_check", "\n resp id " . $rid . " is_empty=" . empty($mailer_list[$rid]) ." |", FILE_APPEND);
+                            file_put_contents("mailer_list_check.txt", "\n resp id " . $rid . " is_empty=" . empty($mailer_list[$rid]) ." |", FILE_APPEND);
                             // Add all needed links to one letter
                             if (!empty($mailer_list[$rid]))
                             {
@@ -3939,7 +3944,7 @@ class DBase{
                                     $link .= "\n опрос <b>$focus_name</b> $link_string";
                                 }
 
-                                file_put_contents("mailer_list_check", "\n link " . $link, FILE_APPEND);
+                                file_put_contents("mailer_list_check.txt", "\n link " . $link, FILE_APPEND);
                                 $message = str_replace("##$btn_name##", $link, $message);
                                 $message = str_replace("%ФИО%", $focus_name, $message);
                                 $message = str_replace("%NAME%", $focus_name, $message);
@@ -3952,7 +3957,11 @@ class DBase{
                             }
                         }
                         else
-                            log_add("resp id wasnt found in Session->resps list");
+                        {
+                            if (!$resp_mail)
+                                log_add("no resp mail while trying to send invites on qz:create, rid: $rid, cat_id: " . $resp["cat_id"]);
+                        }
+
                         unset($resp);
                     }
                     unset($group);
