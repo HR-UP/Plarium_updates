@@ -3953,7 +3953,7 @@ class DBase{
                                 $message = str_replace("%ORG%", $_SESSION["pers"]["comp"], $message);
                                 $subject = $d["settings"]["letter_head"];
                                 $resp["last_message_id"] = sendMail($subject, $message, $resp_mail);
-                                sleep(7);
+                                //sleep(7);
                             }
                         }
                         else
